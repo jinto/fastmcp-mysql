@@ -8,11 +8,20 @@ from typing import Any, Dict, List, Optional, Union
 from fastmcp import Context
 
 from ..connection import ConnectionManager
+from ..security import SecurityManager, SecurityContext, SecuritySettings
+from ..security.config import FilterMode, RateLimitAlgorithm
+from ..security.injection import SQLInjectionDetector
+from ..security.filtering import BlacklistFilter, WhitelistFilter, CombinedFilter
+from ..security.rate_limiting import create_rate_limiter
+from ..security.exceptions import SecurityError
 
 logger = logging.getLogger(__name__)
 
 # Global connection manager instance
 _connection_manager: Optional[ConnectionManager] = None
+
+# Global security manager instance
+_security_manager: Optional[SecurityManager] = None
 
 
 def set_connection_manager(manager: ConnectionManager) -> None:
@@ -24,6 +33,17 @@ def set_connection_manager(manager: ConnectionManager) -> None:
 def get_connection_manager() -> Optional[ConnectionManager]:
     """Get the global connection manager instance."""
     return _connection_manager
+
+
+def set_security_manager(manager: SecurityManager) -> None:
+    """Set the global security manager instance."""
+    global _security_manager
+    _security_manager = manager
+
+
+def get_security_manager() -> Optional[SecurityManager]:
+    """Get the global security manager instance."""
+    return _security_manager
 
 
 class QueryType(Enum):
@@ -146,7 +166,8 @@ class QueryExecutor:
         self,
         query: str,
         params: Optional[Union[tuple, List[Any]]] = None,
-        database: Optional[str] = None
+        database: Optional[str] = None,
+        context: Optional[SecurityContext] = None
     ) -> Dict[str, Any]:
         """Execute a SQL query.
         
@@ -154,12 +175,20 @@ class QueryExecutor:
             query: SQL query to execute
             params: Query parameters for prepared statement
             database: Optional database name to prefix tables with
+            context: Security context for the request
             
         Returns:
             Dictionary with execution results
         """
         try:
-            # Validate query
+            # Security validation first (if security manager is available)
+            security_manager = get_security_manager()
+            if security_manager and context:
+                # Convert params to tuple for security check
+                security_params = tuple(params) if params else None
+                await security_manager.validate_query(query, security_params, context)
+            
+            # Then validate query type
             self.validator.validate_query(query)
             
             # Convert params to tuple if it's a list
@@ -190,6 +219,15 @@ class QueryExecutor:
                     "rows_affected": result
                 }
         
+        except SecurityError as e:
+            # Security errors should be logged differently
+            logger.warning(f"Security validation failed: {e}", extra={"query": query[:100]})
+            return {
+                "success": False,
+                "error": str(e),
+                "data": None,
+                "rows_affected": None
+            }
         except Exception as e:
             logger.error(f"Query execution failed: {e}", extra={"query": query})
             return {
@@ -296,8 +334,24 @@ async def mysql_query(
         # Create executor
         executor = QueryExecutor(conn_manager, validator)
         
+        # Create security context from FastMCP context
+        security_context = None
+        if get_security_manager():
+            # Extract user information from context if available
+            user_id = None
+            if context and hasattr(context, 'user_id'):
+                user_id = context.user_id
+            elif context and hasattr(context, 'session_id'):
+                user_id = context.session_id
+            
+            security_context = SecurityContext(
+                user_id=user_id or "anonymous",
+                ip_address=getattr(context, 'ip_address', None) if context else None,
+                session_id=getattr(context, 'session_id', None) if context else None
+            )
+        
         # Execute query
-        result = await executor.execute(query, params, database)
+        result = await executor.execute(query, params, database, security_context)
         
         # Format and return result
         return format_query_result(result)

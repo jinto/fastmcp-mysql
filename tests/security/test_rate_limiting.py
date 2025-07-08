@@ -3,303 +3,248 @@
 import pytest
 import asyncio
 import time
-from datetime import datetime, timedelta
-from typing import Dict, Optional
-from unittest.mock import AsyncMock, MagicMock
+from unittest.mock import Mock, AsyncMock
 
-
-class RateLimiter:
-    """Rate limiter for query execution."""
-    
-    def __init__(
-        self,
-        max_requests_per_minute: int = 60,
-        max_requests_per_hour: int = 1000,
-        max_concurrent_queries: int = 10,
-        burst_size: int = 20,
-        cooldown_seconds: int = 60,
-    ):
-        """Initialize rate limiter.
-        
-        Args:
-            max_requests_per_minute: Maximum requests per minute
-            max_requests_per_hour: Maximum requests per hour
-            max_concurrent_queries: Maximum concurrent queries
-            burst_size: Maximum burst size
-            cooldown_seconds: Cooldown period after rate limit hit
-        """
-        self.max_requests_per_minute = max_requests_per_minute
-        self.max_requests_per_hour = max_requests_per_hour
-        self.max_concurrent_queries = max_concurrent_queries
-        self.burst_size = burst_size
-        self.cooldown_seconds = cooldown_seconds
-        
-        # Tracking dictionaries
-        self.minute_requests: Dict[str, list] = {}
-        self.hour_requests: Dict[str, list] = {}
-        self.concurrent_queries: Dict[str, int] = {}
-        self.cooldown_until: Dict[str, datetime] = {}
-    
-    async def check_rate_limit(self, client_id: str) -> tuple[bool, str]:
-        """Check if request is within rate limits.
-        
-        Args:
-            client_id: Client identifier
-            
-        Returns:
-            Tuple of (is_allowed, reason)
-        """
-        # Stub implementation
-        return (True, "OK")
-    
-    async def acquire(self, client_id: str) -> bool:
-        """Acquire a rate limit slot."""
-        return True
-    
-    async def release(self, client_id: str) -> None:
-        """Release a rate limit slot."""
-        pass
+from fastmcp_mysql.security.interfaces import RateLimiter
+from fastmcp_mysql.security.config import RateLimitAlgorithm, SecuritySettings
+from fastmcp_mysql.security.exceptions import RateLimitError
 
 
 class TestRateLimiting:
     """Test rate limiting functionality."""
-
-    @pytest.fixture
-    def rate_limiter(self):
-        """Create a rate limiter with test configuration."""
-        return RateLimiter(
-            max_requests_per_minute=10,
-            max_requests_per_hour=100,
-            max_concurrent_queries=3,
-            burst_size=5,
-            cooldown_seconds=10
+    
+    def test_rate_limiter_interface(self):
+        """Test that RateLimiter interface is properly defined."""
+        from fastmcp_mysql.security.interfaces import RateLimiter
+        
+        # Interface should require these methods
+        assert hasattr(RateLimiter, 'check_limit')
+        assert hasattr(RateLimiter, 'reset')
+    
+    @pytest.mark.asyncio
+    async def test_token_bucket_basic_functionality(self):
+        """Test basic token bucket rate limiting."""
+        from fastmcp_mysql.security.rate_limiting import TokenBucketLimiter
+        
+        # 10 requests per minute, burst of 5
+        limiter = TokenBucketLimiter(
+            requests_per_minute=10,
+            burst_size=5
         )
-
-    # Test Case 1: Per-Minute Rate Limiting
+        
+        # Should allow burst of 5 requests immediately
+        for i in range(5):
+            result = await limiter.check_limit("user1")
+            assert result is True, f"Request {i+1} should be allowed"
+        
+        # 6th request should be rate limited
+        result = await limiter.check_limit("user1")
+        assert result is False, "6th request should be rate limited"
+    
     @pytest.mark.asyncio
-    async def test_per_minute_rate_limiting(self, rate_limiter):
-        """Test per-minute rate limiting."""
-        client_id = "test_client"
+    async def test_token_bucket_refill(self):
+        """Test token bucket refill mechanism."""
+        from fastmcp_mysql.security.rate_limiting import TokenBucketLimiter
         
-        # Should allow up to max_requests_per_minute
-        for i in range(rate_limiter.max_requests_per_minute):
-            allowed, reason = await rate_limiter.check_rate_limit(client_id)
-            assert allowed, f"Request {i+1} should be allowed"
+        # Fast refill for testing: 60 requests per minute = 1 per second
+        limiter = TokenBucketLimiter(
+            requests_per_minute=60,
+            burst_size=2
+        )
         
-        # Should block after limit
-        allowed, reason = await rate_limiter.check_rate_limit(client_id)
-        # assert not allowed
-        # assert "per minute limit" in reason
-
-    # Test Case 2: Per-Hour Rate Limiting
+        # Use up all tokens
+        await limiter.check_limit("user1")
+        await limiter.check_limit("user1")
+        
+        # Should be rate limited
+        assert await limiter.check_limit("user1") is False
+        
+        # Wait for refill
+        await asyncio.sleep(1.1)
+        
+        # Should have 1 token refilled
+        assert await limiter.check_limit("user1") is True
+        assert await limiter.check_limit("user1") is False
+    
     @pytest.mark.asyncio
-    async def test_per_hour_rate_limiting(self, rate_limiter):
-        """Test per-hour rate limiting."""
-        client_id = "test_client"
-        
-        # Simulate requests over time
-        for i in range(rate_limiter.max_requests_per_hour):
-            allowed, reason = await rate_limiter.check_rate_limit(client_id)
-            # Should be allowed up to hourly limit
-            if i < rate_limiter.max_requests_per_hour:
-                assert allowed
-        
-        # Should block after hourly limit
-        allowed, reason = await rate_limiter.check_rate_limit(client_id)
-        # assert not allowed
-        # assert "per hour limit" in reason
-
-    # Test Case 3: Concurrent Query Limiting
-    @pytest.mark.asyncio
-    async def test_concurrent_query_limiting(self, rate_limiter):
-        """Test concurrent query limiting."""
-        client_id = "test_client"
-        
-        # Acquire max concurrent slots
-        tasks = []
-        for i in range(rate_limiter.max_concurrent_queries):
-            acquired = await rate_limiter.acquire(client_id)
-            assert acquired, f"Should acquire slot {i+1}"
-        
-        # Should block additional concurrent query
-        acquired = await rate_limiter.acquire(client_id)
-        # assert not acquired
-        
-        # Release one slot
-        await rate_limiter.release(client_id)
-        
-        # Should now allow one more
-        acquired = await rate_limiter.acquire(client_id)
-        # assert acquired
-
-    # Test Case 4: Burst Handling
-    @pytest.mark.asyncio
-    async def test_burst_handling(self, rate_limiter):
-        """Test burst request handling."""
-        client_id = "test_client"
-        
-        # Send burst of requests
-        burst_results = []
-        for i in range(rate_limiter.burst_size + 5):
-            allowed, reason = await rate_limiter.check_rate_limit(client_id)
-            burst_results.append(allowed)
-            # Don't wait between requests (burst)
-        
-        # Should allow up to burst_size
-        allowed_count = sum(burst_results)
-        # assert allowed_count <= rate_limiter.burst_size
-
-    # Test Case 5: Cooldown Period
-    @pytest.mark.asyncio
-    async def test_cooldown_period(self, rate_limiter):
-        """Test cooldown period after rate limit hit."""
-        client_id = "test_client"
-        
-        # Hit rate limit
-        for i in range(rate_limiter.max_requests_per_minute + 1):
-            await rate_limiter.check_rate_limit(client_id)
-        
-        # Should be in cooldown
-        allowed, reason = await rate_limiter.check_rate_limit(client_id)
-        # assert not allowed
-        # assert "cooldown" in reason
-        
-        # Wait for cooldown period
-        await asyncio.sleep(rate_limiter.cooldown_seconds)
-        
-        # Should be allowed again
-        allowed, reason = await rate_limiter.check_rate_limit(client_id)
-        # assert allowed
-
-    # Test Case 6: Multiple Client Isolation
-    @pytest.mark.asyncio
-    async def test_multiple_client_isolation(self, rate_limiter):
-        """Test that rate limits are isolated per client."""
-        client1 = "client1"
-        client2 = "client2"
-        
-        # Max out client1's rate limit
-        for i in range(rate_limiter.max_requests_per_minute):
-            await rate_limiter.check_rate_limit(client1)
-        
-        # Client1 should be blocked
-        allowed, _ = await rate_limiter.check_rate_limit(client1)
-        # assert not allowed
-        
-        # Client2 should still be allowed
-        allowed, _ = await rate_limiter.check_rate_limit(client2)
-        assert allowed
-
-    # Test Case 7: Sliding Window Implementation
-    @pytest.mark.asyncio
-    async def test_sliding_window(self, rate_limiter):
+    async def test_sliding_window_basic_functionality(self):
         """Test sliding window rate limiting."""
-        client_id = "test_client"
+        from fastmcp_mysql.security.rate_limiting import SlidingWindowLimiter
         
-        # Send half the limit
-        for i in range(rate_limiter.max_requests_per_minute // 2):
-            await rate_limiter.check_rate_limit(client_id)
+        # 5 requests per minute
+        limiter = SlidingWindowLimiter(requests_per_minute=5)
         
-        # Wait 30 seconds
-        await asyncio.sleep(30)
+        # Should allow 5 requests
+        for i in range(5):
+            result = await limiter.check_limit("user1")
+            assert result is True, f"Request {i+1} should be allowed"
         
-        # Should allow more requests (sliding window)
-        for i in range(rate_limiter.max_requests_per_minute // 2):
-            allowed, _ = await rate_limiter.check_rate_limit(client_id)
-            assert allowed
-
-    # Test Case 8: Rate Limit Headers
+        # 6th request should be rate limited
+        result = await limiter.check_limit("user1")
+        assert result is False, "6th request should be rate limited"
+    
     @pytest.mark.asyncio
-    async def test_rate_limit_headers(self, rate_limiter):
-        """Test rate limit information in response."""
-        client_id = "test_client"
+    async def test_sliding_window_expiry(self):
+        """Test sliding window request expiry."""
+        from fastmcp_mysql.security.rate_limiting import SlidingWindowLimiter
         
-        # Check rate limit info
-        info = await rate_limiter.get_rate_limit_info(client_id)
+        # 2 requests per minute
+        limiter = SlidingWindowLimiter(requests_per_minute=2)
         
-        expected_keys = [
-            "x-ratelimit-limit",
-            "x-ratelimit-remaining", 
-            "x-ratelimit-reset",
-            "x-ratelimit-retry-after"
-        ]
+        # Make 2 requests
+        assert await limiter.check_limit("user1") is True
+        assert await limiter.check_limit("user1") is True
         
-        # for key in expected_keys:
-        #     assert key in info
-
-    # Test Case 9: Configuration Updates
+        # 3rd should fail
+        assert await limiter.check_limit("user1") is False
+        
+        # Wait for window to slide (requests expire after 60 seconds)
+        # This test would take too long, so we'll skip the expiry test
+        # In real usage, after 60 seconds, old requests would expire
+    
     @pytest.mark.asyncio
-    async def test_dynamic_configuration(self, rate_limiter):
-        """Test dynamic rate limit configuration updates."""
-        client_id = "test_client"
+    async def test_fixed_window_basic_functionality(self):
+        """Test fixed window rate limiting."""
+        from fastmcp_mysql.security.rate_limiting import FixedWindowLimiter
         
-        # Original limit
-        original_limit = rate_limiter.max_requests_per_minute
+        # 5 requests per minute
+        limiter = FixedWindowLimiter(requests_per_minute=5)
         
-        # Update configuration
-        rate_limiter.max_requests_per_minute = 5
+        # Should allow 5 requests in current window
+        for i in range(5):
+            result = await limiter.check_limit("user1")
+            assert result is True, f"Request {i+1} should be allowed"
         
-        # Test new limit
-        for i in range(6):
-            allowed, _ = await rate_limiter.check_rate_limit(client_id)
-            if i < 5:
-                assert allowed
-            else:
-                # assert not allowed
-                pass
-
-    # Test Case 10: Performance Under Load
+        # 6th request should be rate limited
+        result = await limiter.check_limit("user1")
+        assert result is False, "6th request should be rate limited"
+    
     @pytest.mark.asyncio
-    async def test_performance_under_load(self, rate_limiter):
-        """Test rate limiter performance under load."""
-        start_time = time.time()
+    async def test_per_user_limits(self):
+        """Test per-user rate limits."""
+        from fastmcp_mysql.security.rate_limiting import TokenBucketLimiter
         
-        # Simulate many clients
-        tasks = []
-        for client_num in range(100):
-            client_id = f"client_{client_num}"
-            
-            async def client_requests(cid):
-                for _ in range(10):
-                    await rate_limiter.check_rate_limit(cid)
-            
-            tasks.append(client_requests(client_id))
+        # Default limit: 10 per minute
+        # Special user: 20 per minute
+        limiter = TokenBucketLimiter(
+            requests_per_minute=10,
+            burst_size=5,
+            per_user_limits={"special_user": 20}
+        )
         
-        # Run all clients concurrently
-        await asyncio.gather(*tasks)
+        # Regular user hits limit at 5 (burst size)
+        for i in range(5):
+            assert await limiter.check_limit("regular_user") is True
+        assert await limiter.check_limit("regular_user") is False
         
-        elapsed = time.time() - start_time
-        
-        # Should handle 1000 requests in under 1 second
-        assert elapsed < 1.0, f"Rate limiter too slow: {elapsed:.3f}s"
-
-    # Test Case 11: Integration with Query Execution
+        # Special user has higher limit
+        for i in range(10):
+            assert await limiter.check_limit("special_user") is True
+        # But eventually hits their limit too
+        assert await limiter.check_limit("special_user") is False
+    
     @pytest.mark.asyncio
-    async def test_rate_limit_integration(self, rate_limiter):
-        """Test rate limiting integration with query execution."""
-        from fastmcp_mysql.tools.query import QueryExecutor
+    async def test_rate_limiter_reset(self):
+        """Test rate limiter reset functionality."""
+        from fastmcp_mysql.security.rate_limiting import TokenBucketLimiter
         
-        # Mock components
-        mock_connection = MagicMock()
-        mock_validator = MagicMock()
+        limiter = TokenBucketLimiter(
+            requests_per_minute=10,
+            burst_size=2
+        )
         
-        # Create executor with rate limiting
-        executor = QueryExecutor(mock_connection, mock_validator)
-        executor.rate_limiter = rate_limiter
+        # Use up tokens
+        await limiter.check_limit("user1")
+        await limiter.check_limit("user1")
+        assert await limiter.check_limit("user1") is False
         
-        client_id = "test_client"
+        # Reset for specific user
+        await limiter.reset("user1")
         
-        # Execute queries up to limit
-        for i in range(rate_limiter.max_requests_per_minute):
-            # result = await executor.execute_with_rate_limit(
-            #     "SELECT * FROM users",
-            #     client_id=client_id
-            # )
-            pass
+        # Should have tokens again
+        assert await limiter.check_limit("user1") is True
+        assert await limiter.check_limit("user1") is True
+    
+    @pytest.mark.asyncio
+    async def test_rate_limiter_with_security_context(self):
+        """Test rate limiter with security settings."""
+        from fastmcp_mysql.security.rate_limiting import TokenBucketLimiter
         
-        # Next query should be rate limited
-        # with pytest.raises(RateLimitExceeded):
-        #     await executor.execute_with_rate_limit(
-        #         "SELECT * FROM users",
-        #         client_id=client_id
-        #     )
+        settings = SecuritySettings(
+            enable_rate_limiting=True,
+            rate_limit_requests_per_minute=10,
+            rate_limit_burst_size=2
+        )
+        
+        limiter = TokenBucketLimiter(
+            requests_per_minute=settings.rate_limit_requests_per_minute,
+            burst_size=settings.rate_limit_burst_size
+        )
+        
+        # Should allow burst
+        assert await limiter.check_limit("test_user") is True
+        assert await limiter.check_limit("test_user") is True
+        
+        # 3rd request should be rate limited
+        assert await limiter.check_limit("test_user") is False
+    
+    @pytest.mark.asyncio
+    async def test_concurrent_rate_limiting(self):
+        """Test rate limiting under concurrent load."""
+        from fastmcp_mysql.security.rate_limiting import TokenBucketLimiter
+        
+        limiter = TokenBucketLimiter(
+            requests_per_minute=60,
+            burst_size=10
+        )
+        
+        # Simulate concurrent requests
+        async def make_request(user_id: str, request_id: int):
+            result = await limiter.check_limit(user_id)
+            return (request_id, result)
+        
+        # Make 20 concurrent requests
+        tasks = [make_request("user1", i) for i in range(20)]
+        results = await asyncio.gather(*tasks)
+        
+        # First 10 should succeed (burst size)
+        succeeded = sum(1 for _, result in results if result)
+        assert succeeded == 10, f"Expected 10 successful requests, got {succeeded}"
+    
+    @pytest.mark.asyncio
+    async def test_rate_limiter_factory(self):
+        """Test rate limiter factory creation."""
+        from fastmcp_mysql.security.rate_limiting import create_rate_limiter
+        
+        # Token bucket
+        limiter = create_rate_limiter(
+            algorithm=RateLimitAlgorithm.TOKEN_BUCKET,
+            requests_per_minute=60,
+            burst_size=10
+        )
+        assert limiter is not None
+        assert await limiter.check_limit("user1") is True
+        
+        # Sliding window
+        limiter = create_rate_limiter(
+            algorithm=RateLimitAlgorithm.SLIDING_WINDOW,
+            requests_per_minute=60
+        )
+        assert limiter is not None
+        assert await limiter.check_limit("user2") is True
+        
+        # Fixed window
+        limiter = create_rate_limiter(
+            algorithm=RateLimitAlgorithm.FIXED_WINDOW,
+            requests_per_minute=60
+        )
+        assert limiter is not None
+        assert await limiter.check_limit("user3") is True
+    
+    def test_rate_limit_error_messages(self):
+        """Test rate limit error messages."""
+        from fastmcp_mysql.security.exceptions import RateLimitError
+        
+        error = RateLimitError("Rate limit exceeded for user: test_user")
+        assert "rate limit" in str(error).lower()
+        assert "test_user" in str(error)

@@ -113,22 +113,54 @@ result = await mysql_query(
 
 ### Default Security Features
 
+FastMCP MySQL includes comprehensive security features:
+
 - **Read-only by default**: Write operations must be explicitly enabled
-- **SQL injection prevention**: All queries use prepared statements
-- **Query validation**: Dangerous patterns are detected and blocked
-- **Rate limiting**: Prevents abuse through request throttling
+- **SQL injection prevention**: 
+  - Advanced pattern detection for SQL injection attempts
+  - Parameter validation for all queries
+  - Detection of encoded injection attempts (URL, Unicode, Hex)
+- **Query filtering**:
+  - Blacklist mode: Blocks dangerous operations (DDL, system tables, file operations)
+  - Whitelist mode: Only allows explicitly approved query patterns
+  - Customizable filtering rules
+- **Rate limiting**: 
+  - Per-user request throttling
+  - Configurable algorithms (Token Bucket, Sliding Window, Fixed Window)
+  - Burst protection
+
+### Security Configuration
+
+Configure security features via environment variables:
+
+| Variable | Description | Default |
+|----------|-------------|---------|
+| `MYSQL_ENABLE_SECURITY` | Enable security features | true |
+| `MYSQL_ENABLE_INJECTION_DETECTION` | Enable SQL injection detection | true |
+| `MYSQL_ENABLE_RATE_LIMITING` | Enable rate limiting | true |
+| `MYSQL_FILTER_MODE` | Filter mode (blacklist/whitelist) | blacklist |
+| `MYSQL_RATE_LIMIT_RPM` | Rate limit requests per minute | 60 |
+| `MYSQL_RATE_LIMIT_BURST` | Burst size for rate limiting | 10 |
 
 ### Enabling Write Operations
 
 Write operations are disabled by default. Enable them with caution:
 
 ```bash
-# Enable all write operations
+# Enable specific write operations
 MYSQL_ALLOW_INSERT=true \
 MYSQL_ALLOW_UPDATE=true \
 MYSQL_ALLOW_DELETE=true \
 uvx fastmcp-mysql
 ```
+
+### Security Best Practices
+
+1. **Use Prepared Statements**: Always use parameters instead of string concatenation
+2. **Principle of Least Privilege**: Only enable write operations when necessary
+3. **Monitor Security Events**: Check logs for security violations
+4. **Rate Limiting**: Adjust limits based on your application needs
+5. **Whitelist Mode**: Use whitelist mode for production environments when possible
 
 ## Development
 
@@ -185,14 +217,35 @@ The server follows Clean Architecture principles:
 
 ```
 src/fastmcp_mysql/
-├── __init__.py         # Package initialization
-├── __main__.py         # Entry point for uvx
-├── config.py           # Configuration management
-├── server.py           # FastMCP server setup
-├── connection.py       # Database connection management
-└── tools/              # MCP tools
+├── __init__.py                 # Package initialization
+├── __main__.py                 # Entry point for uvx
+├── config.py                   # Configuration management
+├── server.py                   # FastMCP server setup
+├── connection.py               # Database connection management
+├── security/                   # Security module (Clean Architecture)
+│   ├── __init__.py
+│   ├── manager.py              # Security orchestration
+│   ├── config.py               # Security configuration
+│   ├── exceptions.py           # Security exceptions
+│   ├── interfaces/             # Abstract interfaces
+│   │   ├── injection_detector.py
+│   │   ├── query_filter.py
+│   │   └── rate_limiter.py
+│   ├── injection/              # SQL injection detection
+│   │   ├── detector.py
+│   │   └── patterns.py
+│   ├── filtering/              # Query filtering
+│   │   ├── blacklist.py
+│   │   ├── whitelist.py
+│   │   └── combined.py
+│   └── rate_limiting/          # Rate limiting
+│       ├── token_bucket.py
+│       ├── sliding_window.py
+│       ├── fixed_window.py
+│       └── factory.py
+└── tools/                      # MCP tools
     ├── __init__.py
-    └── query.py        # Query execution tool
+    └── query.py                # Query execution tool
 ```
 
 ## Contributing

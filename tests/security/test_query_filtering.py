@@ -1,238 +1,237 @@
-"""Tests for query whitelist/blacklist filtering."""
+"""Tests for query filtering functionality."""
 
 import pytest
-from typing import List, Set, Optional
-from unittest.mock import AsyncMock, MagicMock
+from typing import List
 
-from fastmcp_mysql.connection import ConnectionManager
-
-
-class QueryFilter:
-    """Query filter with whitelist/blacklist support."""
-    
-    def __init__(
-        self,
-        whitelist_patterns: Optional[List[str]] = None,
-        blacklist_patterns: Optional[List[str]] = None,
-        whitelist_tables: Optional[Set[str]] = None,
-        blacklist_tables: Optional[Set[str]] = None,
-        whitelist_operations: Optional[Set[str]] = None,
-        blacklist_operations: Optional[Set[str]] = None,
-    ):
-        """Initialize query filter.
-        
-        Args:
-            whitelist_patterns: Regex patterns for allowed queries
-            blacklist_patterns: Regex patterns for blocked queries
-            whitelist_tables: Set of allowed table names
-            blacklist_tables: Set of blocked table names
-            whitelist_operations: Set of allowed operations (SELECT, INSERT, etc.)
-            blacklist_operations: Set of blocked operations
-        """
-        self.whitelist_patterns = whitelist_patterns or []
-        self.blacklist_patterns = blacklist_patterns or []
-        self.whitelist_tables = whitelist_tables or set()
-        self.blacklist_tables = blacklist_tables or set()
-        self.whitelist_operations = whitelist_operations or set()
-        self.blacklist_operations = blacklist_operations or set()
-    
-    def is_allowed(self, query: str) -> tuple[bool, str]:
-        """Check if query is allowed.
-        
-        Args:
-            query: SQL query to check
-            
-        Returns:
-            Tuple of (is_allowed, reason)
-        """
-        # This is a stub - actual implementation will parse SQL
-        return (True, "OK")
+from fastmcp_mysql.security.interfaces import QueryFilter
+from fastmcp_mysql.security.config import FilterMode
+from fastmcp_mysql.security.exceptions import FilteredQueryError
 
 
 class TestQueryFiltering:
-    """Test query filtering mechanisms."""
-
-    # Test Case 1: Whitelist Patterns
-    @pytest.mark.parametrize("query,whitelist,expected", [
-        # Only SELECT queries allowed
-        ("SELECT * FROM users", [r"^SELECT\s+.*"], True),
-        ("INSERT INTO users VALUES (1)", [r"^SELECT\s+.*"], False),
-        # Specific table access
-        ("SELECT * FROM users", [r".*\s+FROM\s+users(\s|$)"], True),
-        ("SELECT * FROM passwords", [r".*\s+FROM\s+users(\s|$)"], False),
-        # Complex patterns
-        ("SELECT id, name FROM users WHERE active = 1", [r"^SELECT\s+[\w,\s]+FROM\s+users\s+WHERE"], True),
-    ])
-    def test_whitelist_patterns(self, query, whitelist, expected):
-        """Test query whitelist pattern matching."""
-        filter = QueryFilter(whitelist_patterns=whitelist)
-        is_allowed, reason = filter.is_allowed(query)
-        # assert is_allowed == expected
-
-    # Test Case 2: Blacklist Patterns
-    @pytest.mark.parametrize("query,blacklist,expected", [
-        # Block specific tables
-        ("SELECT * FROM passwords", [r".*\s+FROM\s+passwords"], False),
-        ("SELECT * FROM users", [r".*\s+FROM\s+passwords"], True),
-        # Block dangerous functions
-        ("SELECT LOAD_FILE('/etc/passwd')", [r".*LOAD_FILE.*"], False),
-        ("SELECT * FROM users", [r".*LOAD_FILE.*"], True),
-        # Block information schema
-        ("SELECT * FROM information_schema.tables", [r".*information_schema.*"], False),
-    ])
-    def test_blacklist_patterns(self, query, blacklist, expected):
-        """Test query blacklist pattern matching."""
-        filter = QueryFilter(blacklist_patterns=blacklist)
-        is_allowed, reason = filter.is_allowed(query)
-        # assert is_allowed == expected
-
-    # Test Case 3: Table Whitelisting
-    @pytest.mark.parametrize("query,allowed_tables,expected", [
-        # Single table whitelist
-        ("SELECT * FROM users", {"users"}, True),
-        ("SELECT * FROM passwords", {"users"}, False),
-        # Multiple tables
-        ("SELECT * FROM users JOIN orders ON users.id = orders.user_id", {"users", "orders"}, True),
-        ("SELECT * FROM users JOIN passwords ON users.id = passwords.user_id", {"users", "orders"}, False),
-        # Subqueries
-        ("SELECT * FROM users WHERE id IN (SELECT user_id FROM orders)", {"users", "orders"}, True),
-    ])
-    def test_table_whitelisting(self, query, allowed_tables, expected):
-        """Test table-level whitelisting."""
-        filter = QueryFilter(whitelist_tables=allowed_tables)
-        is_allowed, reason = filter.is_allowed(query)
-        # assert is_allowed == expected
-
-    # Test Case 4: Table Blacklisting
-    @pytest.mark.parametrize("query,blocked_tables,expected", [
-        # Block sensitive tables
-        ("SELECT * FROM audit_logs", {"audit_logs", "passwords"}, False),
-        ("SELECT * FROM users", {"audit_logs", "passwords"}, True),
-        # Complex queries
-        ("SELECT u.* FROM users u WHERE NOT EXISTS (SELECT 1 FROM audit_logs)", {"audit_logs"}, False),
-    ])
-    def test_table_blacklisting(self, query, blocked_tables, expected):
-        """Test table-level blacklisting."""
-        filter = QueryFilter(blacklist_tables=blocked_tables)
-        is_allowed, reason = filter.is_allowed(query)
-        # assert is_allowed == expected
-
-    # Test Case 5: Operation Filtering
-    @pytest.mark.parametrize("query,allowed_ops,blocked_ops,expected", [
-        # Whitelist operations
-        ("SELECT * FROM users", {"SELECT"}, set(), True),
-        ("INSERT INTO users VALUES (1)", {"SELECT"}, set(), False),
-        # Blacklist operations
-        ("DELETE FROM users", set(), {"DELETE", "DROP"}, False),
-        ("SELECT * FROM users", set(), {"DELETE", "DROP"}, True),
-        # Combined
-        ("UPDATE users SET name = 'John'", {"SELECT", "UPDATE"}, {"DELETE"}, True),
-    ])
-    def test_operation_filtering(self, query, allowed_ops, blocked_ops, expected):
-        """Test operation-level filtering."""
-        filter = QueryFilter(
-            whitelist_operations=allowed_ops,
-            blacklist_operations=blocked_ops
-        )
-        is_allowed, reason = filter.is_allowed(query)
-        # assert is_allowed == expected
-
-    # Test Case 6: Combined Filters
-    def test_combined_filtering_rules(self):
-        """Test combination of multiple filtering rules."""
-        filter = QueryFilter(
-            whitelist_patterns=[r"^SELECT\s+.*"],
-            whitelist_tables={"users", "orders", "products"},
-            blacklist_patterns=[r".*information_schema.*", r".*LOAD_FILE.*"],
-            blacklist_tables={"passwords", "api_keys"},
-        )
+    """Test query filtering functionality."""
+    
+    def test_query_filter_interface(self):
+        """Test that QueryFilter interface is properly defined."""
+        from fastmcp_mysql.security.interfaces import QueryFilter
         
-        test_cases = [
-            # Allowed: SELECT from whitelisted table
-            ("SELECT * FROM users", True),
-            # Blocked: Non-SELECT operation
-            ("INSERT INTO users VALUES (1)", False),
-            # Blocked: Blacklisted table
-            ("SELECT * FROM passwords", False),
-            # Blocked: Blacklisted pattern
-            ("SELECT * FROM information_schema.tables", False),
-            # Blocked: Not in whitelist table
-            ("SELECT * FROM random_table", False),
+        # Interface should require these methods
+        assert hasattr(QueryFilter, 'validate')
+        assert hasattr(QueryFilter, 'is_allowed')
+    
+    @pytest.mark.asyncio
+    async def test_blacklist_filter_blocks_dangerous_queries(self, dangerous_queries):
+        """Test that blacklist filter blocks dangerous queries."""
+        from fastmcp_mysql.security.filtering import BlacklistFilter
+        
+        filter = BlacklistFilter()
+        
+        for query in dangerous_queries:
+            # Should not be allowed
+            assert not filter.is_allowed(query), f"Dangerous query not blocked: {query}"
+            
+            # Should raise exception on validate
+            with pytest.raises(FilteredQueryError) as exc:
+                filter.validate(query)
+            assert "blacklisted" in str(exc.value).lower()
+    
+    @pytest.mark.asyncio
+    async def test_blacklist_filter_allows_safe_queries(self, safe_queries):
+        """Test that blacklist filter allows safe queries."""
+        from fastmcp_mysql.security.filtering import BlacklistFilter
+        
+        filter = BlacklistFilter()
+        
+        for query in safe_queries:
+            # Should be allowed
+            assert filter.is_allowed(query), f"Safe query blocked: {query}"
+            
+            # Should not raise exception
+            filter.validate(query)  # Should not raise
+    
+    def test_whitelist_filter_allows_whitelisted_queries(self):
+        """Test that whitelist filter only allows whitelisted queries."""
+        from fastmcp_mysql.security.filtering import WhitelistFilter
+        
+        # Define allowed patterns
+        allowed_patterns = [
+            r"^SELECT \* FROM users WHERE id = %s$",
+            r"^SELECT name, email FROM customers WHERE .+$",
+            r"^INSERT INTO logs \(.+\) VALUES \(.+\)$",
         ]
         
-        for query, expected in test_cases:
-            is_allowed, reason = filter.is_allowed(query)
-            # assert is_allowed == expected, f"Query: {query}, Reason: {reason}"
-
-    # Test Case 7: Dynamic Filter Updates
-    def test_dynamic_filter_updates(self):
-        """Test runtime updates to filter rules."""
-        filter = QueryFilter()
+        filter = WhitelistFilter(patterns=allowed_patterns)
         
-        # Initially allow everything
-        assert filter.is_allowed("SELECT * FROM users")[0] == True
+        # These should be allowed
+        allowed_queries = [
+            "SELECT * FROM users WHERE id = %s",
+            "SELECT name, email FROM customers WHERE status = %s",
+            "INSERT INTO logs (message, level) VALUES (%s, %s)",
+        ]
         
-        # Add blacklist rule
-        filter.blacklist_tables.add("users")
-        # assert filter.is_allowed("SELECT * FROM users")[0] == False
+        for query in allowed_queries:
+            assert filter.is_allowed(query), f"Whitelisted query blocked: {query}"
+            filter.validate(query)  # Should not raise
+    
+    def test_whitelist_filter_blocks_non_whitelisted_queries(self):
+        """Test that whitelist filter blocks non-whitelisted queries."""
+        from fastmcp_mysql.security.filtering import WhitelistFilter
         
-        # Add whitelist rule (whitelist takes precedence)
-        filter.whitelist_tables.add("users")
-        # assert filter.is_allowed("SELECT * FROM users")[0] == True
-
-    # Test Case 8: Performance with Large Rulesets
-    def test_filter_performance(self):
-        """Test filter performance with large rule sets."""
+        # Very restrictive whitelist
+        allowed_patterns = [
+            r"^SELECT id, name FROM users WHERE id = %s$",
+        ]
+        
+        filter = WhitelistFilter(patterns=allowed_patterns)
+        
+        # These should be blocked
+        blocked_queries = [
+            "SELECT * FROM users",  # Not exact match
+            "SELECT id, name FROM customers WHERE id = %s",  # Wrong table
+            "DELETE FROM users WHERE id = %s",  # Not whitelisted operation
+            "SELECT id, name FROM users WHERE id = %s OR 1=1",  # Extra conditions
+        ]
+        
+        for query in blocked_queries:
+            assert not filter.is_allowed(query), f"Non-whitelisted query allowed: {query}"
+            
+            with pytest.raises(FilteredQueryError) as exc:
+                filter.validate(query)
+            assert "not whitelisted" in str(exc.value).lower()
+    
+    def test_combined_filter_modes(self):
+        """Test combined filter modes (BOTH)."""
+        from fastmcp_mysql.security.filtering import CombinedFilter, BlacklistFilter, WhitelistFilter
+        
+        # Create individual filters
+        blacklist = BlacklistFilter()
+        whitelist = WhitelistFilter(patterns=[
+            r"^SELECT .+ FROM products WHERE .+$",
+            r"^INSERT INTO orders .+$",
+        ])
+        
+        # Combined filter (must pass both)
+        filter = CombinedFilter(filters=[blacklist, whitelist])
+        
+        # Should pass both filters
+        good_query = "SELECT * FROM products WHERE category = %s"
+        assert filter.is_allowed(good_query)
+        filter.validate(good_query)  # Should not raise
+        
+        # Fails whitelist (not in allowed patterns)
+        bad_query1 = "SELECT * FROM users WHERE id = %s"
+        assert not filter.is_allowed(bad_query1)
+        
+        # Fails blacklist (information_schema)
+        bad_query2 = "SELECT * FROM products WHERE id IN (SELECT id FROM information_schema.tables)"
+        assert not filter.is_allowed(bad_query2)
+    
+    def test_custom_blacklist_patterns(self):
+        """Test custom blacklist patterns."""
+        from fastmcp_mysql.security.filtering import BlacklistFilter
+        
+        # Custom patterns to block
+        custom_patterns = [
+            r"\bTEMP_",  # Block TEMP_ prefix
+            r"\bEXPERIMENTAL_",  # Block experimental features
+            r"\bpassword\b",  # Block any query mentioning passwords
+        ]
+        
+        filter = BlacklistFilter(additional_patterns=custom_patterns)
+        
+        blocked_queries = [
+            "SELECT * FROM TEMP_users",
+            "SELECT EXPERIMENTAL_feature FROM config",
+            "SELECT username, password FROM users",
+        ]
+        
+        for query in blocked_queries:
+            assert not filter.is_allowed(query), f"Custom pattern not blocked: {query}"
+    
+    def test_filter_case_sensitivity(self):
+        """Test that filters are case-insensitive."""
+        from fastmcp_mysql.security.filtering import BlacklistFilter
+        
+        filter = BlacklistFilter()
+        
+        # Different case variations of dangerous queries
+        variations = [
+            "SELECT * FROM INFORMATION_SCHEMA.TABLES",
+            "select * from information_schema.tables",
+            "SeLeCt * FrOm InFoRmAtIoN_sChEmA.tAbLeS",
+        ]
+        
+        for query in variations:
+            assert not filter.is_allowed(query), f"Case variation not blocked: {query}"
+    
+    def test_filter_with_comments(self):
+        """Test that filters detect patterns even with comments."""
+        from fastmcp_mysql.security.filtering import BlacklistFilter
+        
+        filter = BlacklistFilter()
+        
+        # Queries with comments trying to bypass filters
+        commented_queries = [
+            "SELECT * FROM /* comment */ information_schema.tables",
+            "SELECT * FROM users; -- DROP TABLE users",
+            "SELECT LOAD_FILE/* comment */('/etc/passwd')",
+        ]
+        
+        for query in commented_queries:
+            assert not filter.is_allowed(query), f"Commented query not blocked: {query}"
+    
+    @pytest.mark.asyncio
+    async def test_filter_performance(self):
+        """Test filter performance with many patterns."""
+        from fastmcp_mysql.security.filtering import BlacklistFilter
         import time
         
-        # Create filter with many rules
-        filter = QueryFilter(
-            whitelist_patterns=[f"pattern_{i}" for i in range(100)],
-            blacklist_patterns=[f"blocked_{i}" for i in range(100)],
-            whitelist_tables={f"table_{i}" for i in range(1000)},
-            blacklist_tables={f"blocked_table_{i}" for i in range(1000)},
-        )
+        # Create filter with many patterns
+        filter = BlacklistFilter()
         
-        # Measure query validation time
+        # Generate many queries
+        queries = [f"SELECT * FROM table{i} WHERE id = %s" for i in range(1000)]
+        
+        # Measure time
         start = time.time()
-        for _ in range(1000):
-            filter.is_allowed("SELECT * FROM users WHERE id = 1")
-        elapsed = time.time() - start
+        for query in queries:
+            filter.is_allowed(query)
+        end = time.time()
         
-        # Should complete in reasonable time (< 100ms for 1000 queries)
-        assert elapsed < 0.1, f"Filter too slow: {elapsed:.3f}s for 1000 queries"
-
-    # Test Case 9: SQL Parsing Edge Cases
-    @pytest.mark.parametrize("query,tables_expected", [
-        # CTEs
-        ("WITH cte AS (SELECT * FROM users) SELECT * FROM cte", {"users"}),
-        # Table aliases
-        ("SELECT u.id FROM users u", {"users"}),
-        # Qualified table names
-        ("SELECT * FROM db.users", {"users"}),
-        # Multiple databases
-        ("SELECT * FROM db1.users JOIN db2.orders", {"users", "orders"}),
-    ])
-    def test_sql_parsing_edge_cases(self, query, tables_expected):
-        """Test SQL parsing for complex queries."""
-        # Future implementation will extract tables correctly
-        pass
-
-    # Test Case 10: Error Messages
-    def test_filter_error_messages(self):
-        """Test that filter provides helpful error messages."""
-        filter = QueryFilter(
-            whitelist_tables={"users", "orders"},
-            blacklist_patterns=[r".*DROP.*"]
-        )
+        # Should be fast (less than 200ms for 1000 queries)
+        assert (end - start) < 0.2, f"Filter too slow: {end - start}s for 1000 queries"
+    
+    def test_filter_with_prepared_statements(self):
+        """Test that filters allow proper prepared statements."""
+        from fastmcp_mysql.security.filtering import BlacklistFilter
         
-        test_cases = [
-            ("SELECT * FROM passwords", "Table 'passwords' is not in whitelist"),
-            ("DROP TABLE users", "Query matches blacklisted pattern: .*DROP.*"),
-            ("DELETE FROM audit_logs", "Table 'audit_logs' is not in whitelist"),
+        filter = BlacklistFilter()
+        
+        # Prepared statements should be allowed
+        prepared_queries = [
+            "SELECT * FROM users WHERE id = %s",
+            "SELECT * FROM users WHERE id = ? AND status = ?",
+            "INSERT INTO logs (message) VALUES (%s)",
+            "UPDATE users SET last_login = %s WHERE id = %s",
         ]
         
-        for query, expected_reason in test_cases:
-            is_allowed, reason = filter.is_allowed(query)
-            # assert not is_allowed
-            # assert expected_reason in reason
+        for query in prepared_queries:
+            assert filter.is_allowed(query), f"Prepared statement blocked: {query}"
+    
+    def test_filter_error_messages(self):
+        """Test that filter errors provide useful information."""
+        from fastmcp_mysql.security.filtering import BlacklistFilter, WhitelistFilter
+        
+        blacklist = BlacklistFilter()
+        whitelist = WhitelistFilter(patterns=[r"^SELECT id FROM users$"])
+        
+        # Blacklist error
+        with pytest.raises(FilteredQueryError) as exc:
+            blacklist.validate("SELECT * FROM information_schema.tables")
+        assert "blacklisted" in str(exc.value).lower()
+        assert "information_schema" in str(exc.value).lower()
+        
+        # Whitelist error
+        with pytest.raises(FilteredQueryError) as exc:
+            whitelist.validate("DELETE FROM users")
+        assert "not whitelisted" in str(exc.value).lower()

@@ -1,23 +1,34 @@
 """Query filter interface for clean architecture."""
 
 from abc import ABC, abstractmethod
-from typing import Optional, Tuple
+from typing import Optional
 
 
 class QueryFilter(ABC):
     """Abstract base class for query filters."""
     
     @abstractmethod
-    async def filter(self, query: str, params: Optional[tuple] = None) -> Tuple[bool, Optional[str]]:
+    def is_allowed(self, query: str) -> bool:
         """
-        Filter a query based on security rules.
+        Check if a query is allowed.
         
         Args:
-            query: SQL query to filter
-            params: Query parameters
+            query: SQL query to check
             
         Returns:
-            Tuple of (is_allowed, rejection_reason)
-            If allowed, rejection_reason is None
+            True if allowed, False otherwise
+        """
+        pass
+    
+    @abstractmethod
+    def validate(self, query: str) -> None:
+        """
+        Validate a query and raise exception if not allowed.
+        
+        Args:
+            query: SQL query to validate
+            
+        Raises:
+            FilteredQueryError: If query is not allowed
         """
         pass
