@@ -1,0 +1,323 @@
+name: PR Validation
+
+on:
+  pull_request:
+    types: [opened, synchronize, reopened]
+
+permissions:
+  contents: read
+  pull-requests: write
+  issues: write
+  checks: write
+
+env:
+  PYTHON_VERSION: "3.11"
+  UV_VERSION: "0.3.0"
+
+jobs:
+  pr-title:
+    name: Validate PR Title
+    runs-on: ubuntu-latest
+    steps:
+      - name: Check PR title format
+        uses: amannn/action-semantic-pull-request@v5
+        env:
+          GITHUB_TOKEN: ${{ secrets.GITHUB_TOKEN }}
+        with:
+          types: |
+            feat
+            fix
+            docs
+            style
+            refactor
+            perf
+            test
+            build
+            ci
+            chore
+            revert
+          requireScope: false
+          subjectPattern: ^(?![A-Z]).+$
+          subjectPatternError: |
+            The subject "{subject}" found in the pull request title "{title}"
+            didn't match the configured pattern. Please ensure that the subject
+            doesn't start with an uppercase character.
+
+  pr-size:
+    name: Check PR Size
+    runs-on: ubuntu-latest
+    steps:
+      - uses: actions/checkout@v4
+        with:
+          fetch-depth: 0
+      
+      - name: Check PR size
+        uses: actions/github-script@v7
+        with:
+          script: |
+            const pr = context.payload.pull_request;
+            const { data: files } = await github.rest.pulls.listFiles({
+              owner: context.repo.owner,
+              repo: context.repo.repo,
+              pull_number: pr.number
+            });
+            
+            const totalChanges = files.reduce((sum, file) => sum + file.changes, 0);
+            const filesChanged = files.length;
+            
+            let comment = `## PR Size Analysis\n\n`;
+            comment += `- **Files changed**: ${filesChanged}\n`;
+            comment += `- **Total lines changed**: ${totalChanges}\n\n`;
+            
+            if (totalChanges > 1000) {
+              comment += `⚠️ **Warning**: This PR is quite large (${totalChanges} lines). Consider breaking it into smaller PRs.\n`;
+              core.warning(`PR is large: ${totalChanges} lines changed`);
+            } else if (totalChanges > 500) {
+              comment += `📊 **Note**: This PR is medium-sized (${totalChanges} lines). Make sure it's well-tested.\n`;
+            } else {
+              comment += `✅ **Good**: This PR is a manageable size (${totalChanges} lines).\n`;
+            }
+            
+            // Find and update or create comment
+            const { data: comments } = await github.rest.issues.listComments({
+              owner: context.repo.owner,
+              repo: context.repo.repo,
+              issue_number: pr.number
+            });
+            
+            const botComment = comments.find(comment => 
+              comment.user.type === 'Bot' && comment.body.includes('PR Size Analysis')
+            );
+            
+            if (botComment) {
+              await github.rest.issues.updateComment({
+                owner: context.repo.owner,
+                repo: context.repo.repo,
+                comment_id: botComment.id,
+                body: comment
+              });
+            } else {
+              await github.rest.issues.createComment({
+                owner: context.repo.owner,
+                repo: context.repo.repo,
+                issue_number: pr.number,
+                body: comment
+              });
+            }
+
+  code-quality:
+    name: Code Quality Check
+    runs-on: ubuntu-latest
+    steps:
+      - uses: actions/checkout@v4
+        with:
+          fetch-depth: 0
+      
+      - name: Install uv
+        uses: astral-sh/setup-uv@v5
+        with:
+          version: ${{ env.UV_VERSION }}
+      
+      - name: Set up Python
+        uses: actions/setup-python@v5
+        with:
+          python-version: ${{ env.PYTHON_VERSION }}
+      
+      - name: Install dependencies
+        run: |
+          uv pip install --system -e ".[dev]"
+      
+      - name: Get changed files
+        id: changed-files
+        uses: tj-actions/changed-files@v41
+        with:
+          files: |
+            **/*.py
+      
+      - name: Run code quality checks on changed files
+        if: steps.changed-files.outputs.any_changed == 'true'
+        run: |
+          echo "Checking the following Python files:"
+          echo "${{ steps.changed-files.outputs.all_changed_files }}"
+          
+          # Run black on changed files
+          echo "${{ steps.changed-files.outputs.all_changed_files }}" | xargs -r black --check --diff
+          
+          # Run ruff on changed files  
+          echo "${{ steps.changed-files.outputs.all_changed_files }}" | xargs -r ruff check
+          
+          # Run mypy on changed files
+          echo "${{ steps.changed-files.outputs.all_changed_files }}" | xargs -r mypy
+
+  test-coverage:
+    name: Test Coverage
+    runs-on: ubuntu-latest
+    services:
+      mysql:
+        image: mysql:8.0
+        env:
+          MYSQL_ROOT_PASSWORD: testpassword
+          MYSQL_DATABASE: testdb
+        ports:
+          - 3306:3306
+        options: >-
+          --health-cmd="mysqladmin ping -h localhost"
+          --health-interval=10s
+          --health-timeout=5s
+          --health-retries=5
+    steps:
+      - uses: actions/checkout@v4
+        with:
+          fetch-depth: 0
+      
+      - name: Install uv
+        uses: astral-sh/setup-uv@v5
+        with:
+          version: ${{ env.UV_VERSION }}
+      
+      - name: Set up Python
+        uses: actions/setup-python@v5
+        with:
+          python-version: ${{ env.PYTHON_VERSION }}
+      
+      - name: Install dependencies
+        run: |
+          uv pip install --system -e ".[dev]"
+      
+      - name: Wait for MySQL
+        run: |
+          until mysqladmin ping -h 127.0.0.1 -P 3306 --silent; do
+            echo 'waiting for mysql...'
+            sleep 2
+          done
+      
+      - name: Run tests with coverage
+        env:
+          MYSQL_HOST: 127.0.0.1
+          MYSQL_PORT: 3306
+          MYSQL_USER: root
+          MYSQL_PASSWORD: testpassword
+          MYSQL_DATABASE: testdb
+        run: |
+          pytest --cov=fastmcp_mysql --cov-report=xml --cov-report=term-missing --cov-report=html
+      
+      - name: Upload coverage report
+        uses: actions/upload-artifact@v4
+        with:
+          name: coverage-report
+          path: htmlcov/
+      
+      - name: Coverage comment
+        uses: py-cov-action/python-coverage-comment-action@v3
+        with:
+          GITHUB_TOKEN: ${{ secrets.GITHUB_TOKEN }}
+          MINIMUM_GREEN: 85
+          MINIMUM_ORANGE: 70
+
+  security-check:
+    name: Security Check
+    runs-on: ubuntu-latest
+    steps:
+      - uses: actions/checkout@v4
+      
+      - name: Run Trivy vulnerability scanner
+        uses: aquasecurity/trivy-action@master
+        with:
+          scan-type: 'fs'
+          scan-ref: '.'
+          format: 'sarif'
+          output: 'trivy-results.sarif'
+          severity: 'CRITICAL,HIGH'
+      
+      - name: Upload Trivy scan results
+        uses: github/codeql-action/upload-sarif@v3
+        with:
+          sarif_file: 'trivy-results.sarif'
+
+  documentation:
+    name: Documentation Check
+    runs-on: ubuntu-latest
+    steps:
+      - uses: actions/checkout@v4
+      
+      - name: Check README
+        run: |
+          if [ ! -f "README.md" ]; then
+            echo "ERROR: README.md not found"
+            exit 1
+          fi
+      
+      - name: Check for broken links
+        uses: gaurav-nelson/github-action-markdown-link-check@v1
+        with:
+          use-quiet-mode: 'yes'
+          config-file: '.github/markdown-link-check-config.json'
+        continue-on-error: true
+
+  pr-comment:
+    name: PR Summary Comment
+    runs-on: ubuntu-latest
+    needs: [pr-title, pr-size, code-quality, test-coverage, security-check]
+    if: always()
+    steps:
+      - name: Create PR summary
+        uses: actions/github-script@v7
+        with:
+          script: |
+            const pr = context.payload.pull_request;
+            const jobs = [
+              { name: 'PR Title', status: '${{ needs.pr-title.result }}' },
+              { name: 'PR Size', status: '${{ needs.pr-size.result }}' },
+              { name: 'Code Quality', status: '${{ needs.code-quality.result }}' },
+              { name: 'Test Coverage', status: '${{ needs.test-coverage.result }}' },
+              { name: 'Security', status: '${{ needs.security-check.result }}' }
+            ];
+            
+            let comment = `## PR Validation Summary\n\n`;
+            comment += `| Check | Status |\n`;
+            comment += `|-------|--------|\n`;
+            
+            jobs.forEach(job => {
+              const emoji = job.status === 'success' ? '✅' : 
+                           job.status === 'failure' ? '❌' : '⏭️';
+              comment += `| ${job.name} | ${emoji} ${job.status} |\n`;
+            });
+            
+            comment += `\n### Next Steps\n`;
+            const failedJobs = jobs.filter(job => job.status === 'failure');
+            
+            if (failedJobs.length > 0) {
+              comment += `\n⚠️ Please fix the failing checks:\n`;
+              failedJobs.forEach(job => {
+                comment += `- ${job.name}\n`;
+              });
+            } else {
+              comment += `\n✅ All checks passed! Your PR is ready for review.\n`;
+            }
+            
+            // Find and update or create comment
+            const { data: comments } = await github.rest.issues.listComments({
+              owner: context.repo.owner,
+              repo: context.repo.repo,
+              issue_number: pr.number
+            });
+            
+            const botComment = comments.find(comment => 
+              comment.user.type === 'Bot' && comment.body.includes('PR Validation Summary')
+            );
+            
+            if (botComment) {
+              await github.rest.issues.updateComment({
+                owner: context.repo.owner,
+                repo: context.repo.repo,
+                comment_id: botComment.id,
+                body: comment
+              });
+            } else {
+              await github.rest.issues.createComment({
+                owner: context.repo.owner,
+                repo: context.repo.repo,
+                issue_number: pr.number,
+                body: comment
+              });
+            }

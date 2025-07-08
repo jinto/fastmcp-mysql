@@ -96,6 +96,40 @@ class Settings(BaseSettings):
         default=LogLevel.INFO,
         description="Logging level"
     )
+    log_dir: Optional[str] = Field(
+        default=None,
+        description="Directory for log files"
+    )
+    enable_file_logging: bool = Field(
+        default=False,
+        description="Enable file logging with rotation"
+    )
+    
+    # Observability settings
+    enable_metrics: bool = Field(
+        default=True,
+        description="Enable metrics collection"
+    )
+    enable_health_checks: bool = Field(
+        default=True,
+        description="Enable health check endpoints"
+    )
+    enable_tracing: bool = Field(
+        default=False,
+        description="Enable distributed tracing"
+    )
+    otlp_endpoint: Optional[str] = Field(
+        default=None,
+        description="OpenTelemetry collector endpoint"
+    )
+    slow_query_threshold_ms: int = Field(
+        default=1000,
+        description="Threshold for slow query logging in milliseconds"
+    )
+    metrics_export_interval: int = Field(
+        default=60,
+        description="Metrics export interval in seconds"
+    )
     
     model_config = {
         "env_prefix": "MYSQL_",

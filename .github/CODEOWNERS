@@ -1,0 +1,28 @@
+# FastMCP MySQL Server CODEOWNERS
+# This file defines who should review code changes
+
+# Default owners for everything
+* @jinto
+
+# CI/CD and GitHub configuration
+/.github/ @jinto
+*.yml @jinto
+*.yaml @jinto
+
+# Core library code
+/src/fastmcp_mysql/ @jinto
+
+# Security-related code requires additional review
+/src/fastmcp_mysql/security/ @jinto
+/SECURITY.md @jinto
+
+# Tests
+/tests/ @jinto
+
+# Documentation
+/*.md @jinto
+/docs/ @jinto
+
+# Configuration files
+/pyproject.toml @jinto
+/.pre-commit-config.yaml @jinto

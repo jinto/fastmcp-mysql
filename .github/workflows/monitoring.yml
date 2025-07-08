@@ -1,0 +1,296 @@
+name: Monitoring and Metrics
+
+on:
+  schedule:
+    - cron: '0 0 * * 0'  # Weekly on Sunday
+  workflow_dispatch:
+
+permissions:
+  contents: read
+  issues: write
+
+jobs:
+  dependency-check:
+    name: Dependency Health Check
+    runs-on: ubuntu-latest
+    steps:
+      - uses: actions/checkout@v4
+      
+      - name: Install uv
+        uses: astral-sh/setup-uv@v5
+        with:
+          version: "0.3.0"
+      
+      - name: Set up Python
+        uses: actions/setup-python@v5
+        with:
+          python-version: "3.11"
+      
+      - name: Install dependencies
+        run: |
+          uv pip install --system -e ".[dev]"
+          uv pip install --system pip-audit safety
+      
+      - name: Check for outdated dependencies
+        run: |
+          echo "## Outdated Dependencies Report" > outdated-report.md
+          echo "" >> outdated-report.md
+          echo "Generated on: $(date)" >> outdated-report.md
+          echo "" >> outdated-report.md
+          
+          echo "### Direct Dependencies" >> outdated-report.md
+          echo '```' >> outdated-report.md
+          pip list --outdated >> outdated-report.md
+          echo '```' >> outdated-report.md
+      
+      - name: Security audit
+        run: |
+          echo "" >> outdated-report.md
+          echo "### Security Vulnerabilities" >> outdated-report.md
+          echo '```' >> outdated-report.md
+          pip-audit --desc >> outdated-report.md || true
+          echo '```' >> outdated-report.md
+      
+      - name: Create or update issue
+        uses: actions/github-script@v7
+        with:
+          script: |
+            const fs = require('fs');
+            const report = fs.readFileSync('outdated-report.md', 'utf8');
+            
+            // Search for existing issue
+            const { data: issues } = await github.rest.issues.listForRepo({
+              owner: context.repo.owner,
+              repo: context.repo.repo,
+              labels: 'dependencies,automated',
+              state: 'open'
+            });
+            
+            const title = '📊 Weekly Dependency Health Report';
+            const body = report + '\n\n---\n*This is an automated report generated weekly.*';
+            
+            if (issues.length > 0) {
+              // Update existing issue
+              await github.rest.issues.update({
+                owner: context.repo.owner,
+                repo: context.repo.repo,
+                issue_number: issues[0].number,
+                body: body
+              });
+              console.log(`Updated issue #${issues[0].number}`);
+            } else {
+              // Create new issue
+              const { data: issue } = await github.rest.issues.create({
+                owner: context.repo.owner,
+                repo: context.repo.repo,
+                title: title,
+                body: body,
+                labels: ['dependencies', 'automated']
+              });
+              console.log(`Created issue #${issue.number}`);
+            }
+
+  performance-baseline:
+    name: Performance Baseline
+    runs-on: ubuntu-latest
+    services:
+      mysql:
+        image: mysql:8.0
+        env:
+          MYSQL_ROOT_PASSWORD: testpassword
+          MYSQL_DATABASE: testdb
+        ports:
+          - 3306:3306
+        options: >-
+          --health-cmd="mysqladmin ping -h localhost"
+          --health-interval=10s
+          --health-timeout=5s
+          --health-retries=5
+    steps:
+      - uses: actions/checkout@v4
+      
+      - name: Install uv
+        uses: astral-sh/setup-uv@v5
+        with:
+          version: "0.3.0"
+      
+      - name: Set up Python
+        uses: actions/setup-python@v5
+        with:
+          python-version: "3.11"
+      
+      - name: Install dependencies
+        run: |
+          uv pip install --system -e ".[dev]"
+          uv pip install --system pytest-benchmark memory-profiler
+      
+      - name: Create performance tests
+        run: |
+          mkdir -p tests/performance
+          cat > tests/performance/test_benchmark.py << 'EOF'
+import pytest
+import asyncio
+from fastmcp_mysql.connection import ConnectionManager
+from fastmcp_mysql.tools.query import QueryTool
+
+@pytest.mark.benchmark(group="connection")
+async def test_connection_pool_performance(benchmark):
+    """Benchmark connection pool performance."""
+    config = {
+        "host": "127.0.0.1",
+        "port": 3306,
+        "user": "root",
+        "password": "testpassword",
+        "database": "testdb",
+        "pool_size": 10
+    }
+    
+    async def create_and_close():
+        manager = ConnectionManager(config)
+        await manager.initialize()
+        await manager.close()
+    
+    benchmark(lambda: asyncio.run(create_and_close()))
+
+@pytest.mark.benchmark(group="query")
+async def test_simple_query_performance(benchmark):
+    """Benchmark simple query performance."""
+    config = {
+        "host": "127.0.0.1",
+        "port": 3306,
+        "user": "root",
+        "password": "testpassword",
+        "database": "testdb"
+    }
+    
+    async def run_query():
+        manager = ConnectionManager(config)
+        await manager.initialize()
+        tool = QueryTool(manager)
+        result = await tool.execute_query("SELECT 1")
+        await manager.close()
+        return result
+    
+    benchmark(lambda: asyncio.run(run_query()))
+EOF
+      
+      - name: Run performance benchmarks
+        env:
+          MYSQL_HOST: 127.0.0.1
+          MYSQL_PORT: 3306
+          MYSQL_USER: root
+          MYSQL_PASSWORD: testpassword
+          MYSQL_DATABASE: testdb
+        run: |
+          pytest tests/performance -v --benchmark-only --benchmark-json=benchmark.json
+      
+      - name: Store benchmark result
+        uses: benchmark-action/github-action-benchmark@v1
+        with:
+          tool: 'pytest'
+          output-file-path: benchmark.json
+          github-token: ${{ secrets.GITHUB_TOKEN }}
+          auto-push: true
+          comment-on-alert: true
+          alert-threshold: '150%'
+          fail-on-alert: false
+
+  code-metrics:
+    name: Code Quality Metrics
+    runs-on: ubuntu-latest
+    steps:
+      - uses: actions/checkout@v4
+      
+      - name: Install uv
+        uses: astral-sh/setup-uv@v5
+        with:
+          version: "0.3.0"
+      
+      - name: Set up Python
+        uses: actions/setup-python@v5
+        with:
+          python-version: "3.11"
+      
+      - name: Install analysis tools
+        run: |
+          uv pip install --system radon xenon flake8 flake8-cognitive-complexity
+      
+      - name: Analyze code complexity
+        run: |
+          echo "## Code Complexity Report" > metrics-report.md
+          echo "" >> metrics-report.md
+          echo "Generated on: $(date)" >> metrics-report.md
+          echo "" >> metrics-report.md
+          
+          echo "### Cyclomatic Complexity" >> metrics-report.md
+          echo '```' >> metrics-report.md
+          radon cc src -s -a >> metrics-report.md
+          echo '```' >> metrics-report.md
+          
+          echo "" >> metrics-report.md
+          echo "### Maintainability Index" >> metrics-report.md
+          echo '```' >> metrics-report.md
+          radon mi src -s >> metrics-report.md
+          echo '```' >> metrics-report.md
+          
+          echo "" >> metrics-report.md
+          echo "### Raw Metrics" >> metrics-report.md
+          echo '```' >> metrics-report.md
+          radon raw src -s >> metrics-report.md
+          echo '```' >> metrics-report.md
+      
+      - name: Check complexity thresholds
+        run: |
+          # Fail if cyclomatic complexity > 10
+          xenon --max-absolute B --max-modules B --max-average A src
+      
+      - name: Upload metrics report
+        uses: actions/upload-artifact@v4
+        with:
+          name: code-metrics
+          path: metrics-report.md
+
+  documentation-check:
+    name: Documentation Coverage
+    runs-on: ubuntu-latest
+    steps:
+      - uses: actions/checkout@v4
+      
+      - name: Install uv
+        uses: astral-sh/setup-uv@v5
+        with:
+          version: "0.3.0"
+      
+      - name: Set up Python
+        uses: actions/setup-python@v5
+        with:
+          python-version: "3.11"
+      
+      - name: Install dependencies
+        run: |
+          uv pip install --system -e ".[dev]"
+          uv pip install --system interrogate pydocstyle
+      
+      - name: Check docstring coverage
+        run: |
+          echo "## Documentation Coverage Report" > doc-report.md
+          echo "" >> doc-report.md
+          echo "Generated on: $(date)" >> doc-report.md
+          echo "" >> doc-report.md
+          
+          echo "### Docstring Coverage" >> doc-report.md
+          echo '```' >> doc-report.md
+          interrogate -v src >> doc-report.md
+          echo '```' >> doc-report.md
+          
+          echo "" >> doc-report.md
+          echo "### Docstring Style Issues" >> doc-report.md
+          echo '```' >> doc-report.md
+          pydocstyle src --count >> doc-report.md || true
+          echo '```' >> doc-report.md
+      
+      - name: Upload documentation report
+        uses: actions/upload-artifact@v4
+        with:
+          name: documentation-metrics
+          path: doc-report.md

@@ -6,26 +6,65 @@ repos:
       - id: end-of-file-fixer
       - id: check-yaml
       - id: check-added-large-files
+        args: ['--maxkb=1000']
       - id: check-json
       - id: check-toml
       - id: check-merge-conflict
+      - id: check-case-conflict
+      - id: detect-private-key
       - id: debug-statements
+      - id: check-docstring-first
 
   - repo: https://github.com/psf/black
-    rev: 23.12.1
+    rev: 24.2.0
     hooks:
       - id: black
-        language_version: python3
+        language_version: python3.11
+        args: ['--line-length=88']
 
   - repo: https://github.com/astral-sh/ruff-pre-commit
-    rev: v0.1.11
+    rev: v0.2.0
     hooks:
       - id: ruff
-        args: [--fix]
+        args: [--fix, --exit-non-zero-on-fix]
 
   - repo: https://github.com/pre-commit/mirrors-mypy
     rev: v1.8.0
     hooks:
       - id: mypy
-        additional_dependencies: [types-cachetools, types-sqlparse]
-        args: [--config-file=pyproject.toml]
+        additional_dependencies:
+          - pydantic>=2.0
+          - types-cachetools
+        args: [--strict, --ignore-missing-imports]
+        files: ^src/
+
+  - repo: https://github.com/pycqa/bandit
+    rev: 1.7.5
+    hooks:
+      - id: bandit
+        args: ['-r', 'src', '-ll']
+        files: ^src/
+
+  - repo: https://github.com/commitizen-tools/commitizen
+    rev: v3.13.0
+    hooks:
+      - id: commitizen
+        stages: [commit-msg]
+
+  - repo: https://github.com/codespell-project/codespell
+    rev: v2.2.6
+    hooks:
+      - id: codespell
+        args: ['--skip=*.lock']
+
+  - repo: local
+    hooks:
+      - id: pytest-check
+        name: pytest-check
+        entry: pytest
+        language: system
+        pass_filenames: false
+        always_run: true
+        args: ['tests/unit', '--tb=short', '-q']
+        stages: [push]
+EOF < /dev/null
