@@ -79,7 +79,10 @@ Add to your Claude Desktop configuration:
         "MYSQL_PORT": "3306",
         "MYSQL_USER": "your_username",
         "MYSQL_PASSWORD": "your_password",
-        "MYSQL_DB": "your_database"
+        "MYSQL_DB": "your_database",
+        "MYSQL_ENABLE_SECURITY": "true",
+        "MYSQL_RATE_LIMIT_RPM": "60",
+        "MYSQL_RATE_LIMIT_BURST": "10"
       }
     }
   }
@@ -135,12 +138,18 @@ Configure security features via environment variables:
 
 | Variable | Description | Default |
 |----------|-------------|---------|
-| `MYSQL_ENABLE_SECURITY` | Enable security features | true |
+| `MYSQL_ENABLE_SECURITY` | Enable all security features | true |
 | `MYSQL_ENABLE_INJECTION_DETECTION` | Enable SQL injection detection | true |
 | `MYSQL_ENABLE_RATE_LIMITING` | Enable rate limiting | true |
-| `MYSQL_FILTER_MODE` | Filter mode (blacklist/whitelist) | blacklist |
+| `MYSQL_FILTER_MODE` | Filter mode (blacklist/whitelist/combined) | blacklist |
 | `MYSQL_RATE_LIMIT_RPM` | Rate limit requests per minute | 60 |
 | `MYSQL_RATE_LIMIT_BURST` | Burst size for rate limiting | 10 |
+| `MYSQL_RATE_LIMIT_ALGORITHM` | Rate limiting algorithm (token_bucket/sliding_window/fixed_window) | token_bucket |
+| `MYSQL_MAX_QUERY_LENGTH` | Maximum query length in characters | 10000 |
+| `MYSQL_MAX_PARAMETER_LENGTH` | Maximum parameter length | 1000 |
+| `MYSQL_LOG_SECURITY_EVENTS` | Log security violations | true |
+| `MYSQL_LOG_REJECTED_QUERIES` | Log rejected queries | true |
+| `MYSQL_AUDIT_ALL_QUERIES` | Audit all queries (performance impact) | false |
 
 ### Enabling Write Operations
 

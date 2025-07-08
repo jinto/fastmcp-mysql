@@ -74,6 +74,22 @@
 | `MYSQL_QUERY_TIMEOUT` | 쿼리 타임아웃 (ms) | 30000 |
 | `MYSQL_LOG_LEVEL` | 로그 레벨 (DEBUG, INFO, WARNING, ERROR, CRITICAL) | INFO |
 
+### 보안 관련 변수
+| 변수명 | 설명 | 기본값 |
+|--------|------|--------|
+| `MYSQL_ENABLE_SECURITY` | 모든 보안 기능 활성화 | true |
+| `MYSQL_ENABLE_INJECTION_DETECTION` | SQL 인젝션 탐지 활성화 | true |
+| `MYSQL_ENABLE_RATE_LIMITING` | 속도 제한 활성화 | true |
+| `MYSQL_FILTER_MODE` | 필터 모드 (blacklist/whitelist/combined) | blacklist |
+| `MYSQL_RATE_LIMIT_RPM` | 분당 요청 제한 | 60 |
+| `MYSQL_RATE_LIMIT_BURST` | 버스트 크기 | 10 |
+| `MYSQL_RATE_LIMIT_ALGORITHM` | 속도 제한 알고리즘 (token_bucket/sliding_window/fixed_window) | token_bucket |
+| `MYSQL_MAX_QUERY_LENGTH` | 최대 쿼리 길이 (문자) | 10000 |
+| `MYSQL_MAX_PARAMETER_LENGTH` | 최대 파라미터 길이 | 1000 |
+| `MYSQL_LOG_SECURITY_EVENTS` | 보안 이벤트 로깅 | true |
+| `MYSQL_LOG_REJECTED_QUERIES` | 거부된 쿼리 로깅 | true |
+| `MYSQL_AUDIT_ALL_QUERIES` | 모든 쿼리 감사 (성능 영향) | false |
+
 ## 멀티 데이터베이스 모드
 - ⏳ 여러 데이터베이스 동시 쿼리 지원 (개발 예정)
 - ⏳ 완전한 테이블 이름 지정 필요 (개발 예정)
@@ -139,7 +155,10 @@ MYSQL_ALLOW_INSERT=true MYSQL_ALLOW_UPDATE=true uvx fastmcp-mysql
         "MYSQL_DB": "your_database",
         "MYSQL_ALLOW_INSERT": "false",
         "MYSQL_ALLOW_UPDATE": "false",
-        "MYSQL_ALLOW_DELETE": "false"
+        "MYSQL_ALLOW_DELETE": "false",
+        "MYSQL_ENABLE_SECURITY": "true",
+        "MYSQL_FILTER_MODE": "blacklist",
+        "MYSQL_RATE_LIMIT_RPM": "60"
       }
     }
   }
