@@ -55,6 +55,42 @@ class Settings(BaseSettings):
         description="Cache TTL in milliseconds"
     )
     
+    # Cache settings
+    cache_enabled: bool = Field(
+        default=True,
+        description="Enable query result caching"
+    )
+    cache_max_size: int = Field(
+        default=1000,
+        description="Maximum number of cache entries"
+    )
+    cache_eviction_policy: str = Field(
+        default="lru",
+        description="Cache eviction policy (lru, ttl)"
+    )
+    cache_cleanup_interval: float = Field(
+        default=60.0,
+        description="Cache cleanup interval in seconds"
+    )
+    cache_invalidation_mode: str = Field(
+        default="aggressive",
+        description="Cache invalidation strategy (aggressive, conservative, targeted)"
+    )
+    
+    # Performance settings
+    streaming_chunk_size: int = Field(
+        default=1000,
+        description="Default chunk size for streaming queries"
+    )
+    pagination_default_size: int = Field(
+        default=10,
+        description="Default page size for paginated queries"
+    )
+    pagination_max_size: int = Field(
+        default=1000,
+        description="Maximum allowed page size"
+    )
+    
     # Logging settings
     log_level: LogLevel = Field(
         default=LogLevel.INFO,
@@ -90,6 +126,32 @@ class Settings(BaseSettings):
         if v < 0:
             raise ValueError("Timeout values must be non-negative")
         return v
+    
+    @field_validator("cache_max_size", "streaming_chunk_size", "pagination_default_size", "pagination_max_size")
+    @classmethod
+    def validate_positive_integers(cls, v: int) -> int:
+        """Validate positive integer values."""
+        if v < 1:
+            raise ValueError("Value must be at least 1")
+        return v
+    
+    @field_validator("cache_eviction_policy")
+    @classmethod
+    def validate_eviction_policy(cls, v: str) -> str:
+        """Validate cache eviction policy."""
+        valid_policies = ["lru", "ttl", "fifo"]
+        if v.lower() not in valid_policies:
+            raise ValueError(f"Invalid eviction policy. Must be one of: {', '.join(valid_policies)}")
+        return v.lower()
+    
+    @field_validator("cache_invalidation_mode")
+    @classmethod
+    def validate_invalidation_mode(cls, v: str) -> str:
+        """Validate cache invalidation mode."""
+        valid_modes = ["aggressive", "conservative", "targeted"]
+        if v.lower() not in valid_modes:
+            raise ValueError(f"Invalid invalidation mode. Must be one of: {', '.join(valid_modes)}")
+        return v.lower()
     
     @field_validator("log_level", mode="before")
     @classmethod

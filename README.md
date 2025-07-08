@@ -61,6 +61,15 @@ Configure the server using environment variables:
 | `MYSQL_POOL_SIZE` | Connection pool size | 10 |
 | `MYSQL_QUERY_TIMEOUT` | Query timeout (ms) | 30000 |
 | `MYSQL_LOG_LEVEL` | Log level (DEBUG, INFO, WARNING, ERROR) | INFO |
+| `MYSQL_CACHE_ENABLED` | Enable query result caching | true |
+| `MYSQL_CACHE_MAX_SIZE` | Maximum cache entries | 1000 |
+| `MYSQL_CACHE_TTL` | Cache TTL (ms) | 60000 |
+| `MYSQL_CACHE_EVICTION_POLICY` | Cache eviction policy (lru/ttl/fifo) | lru |
+| `MYSQL_CACHE_CLEANUP_INTERVAL` | Cache cleanup interval (seconds) | 60.0 |
+| `MYSQL_CACHE_INVALIDATION_MODE` | Cache invalidation strategy | aggressive |
+| `MYSQL_STREAMING_CHUNK_SIZE` | Streaming query chunk size | 1000 |
+| `MYSQL_PAGINATION_DEFAULT_SIZE` | Default page size | 10 |
+| `MYSQL_PAGINATION_MAX_SIZE` | Maximum page size | 1000 |
 
 ## Usage
 

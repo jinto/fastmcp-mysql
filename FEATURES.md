@@ -73,6 +73,19 @@
 | `MYSQL_POOL_SIZE` | 연결 풀 크기 | 10 |
 | `MYSQL_QUERY_TIMEOUT` | 쿼리 타임아웃 (ms) | 30000 |
 | `MYSQL_LOG_LEVEL` | 로그 레벨 (DEBUG, INFO, WARNING, ERROR, CRITICAL) | INFO |
+| `MYSQL_STREAMING_CHUNK_SIZE` | 스트리밍 쿼리 청크 크기 | 1000 |
+| `MYSQL_PAGINATION_DEFAULT_SIZE` | 기본 페이지 크기 | 10 |
+| `MYSQL_PAGINATION_MAX_SIZE` | 최대 페이지 크기 | 1000 |
+
+### 캐시 관련 변수
+| 변수명 | 설명 | 기본값 |
+|--------|------|--------|
+| `MYSQL_CACHE_ENABLED` | 쿼리 결과 캐싱 활성화 | true |
+| `MYSQL_CACHE_MAX_SIZE` | 최대 캐시 항목 수 | 1000 |
+| `MYSQL_CACHE_TTL` | 캐시 TTL (밀리초) | 60000 |
+| `MYSQL_CACHE_EVICTION_POLICY` | 캐시 제거 정책 (lru/ttl/fifo) | lru |
+| `MYSQL_CACHE_CLEANUP_INTERVAL` | 캐시 정리 간격 (초) | 60.0 |
+| `MYSQL_CACHE_INVALIDATION_MODE` | 캐시 무효화 전략 (aggressive/conservative/targeted) | aggressive |
 
 ### 보안 관련 변수
 | 변수명 | 설명 | 기본값 |

@@ -4,10 +4,10 @@ import asyncio
 import logging
 from contextlib import asynccontextmanager
 from dataclasses import dataclass, field
-from typing import Any, Dict, Optional, Type, AsyncIterator
+from typing import Any, Dict, Optional, Type, AsyncIterator, List, Tuple
 
 import aiomysql
-from aiomysql import DictCursor, Pool, Connection, OperationalError
+from aiomysql import DictCursor, Pool, Connection, OperationalError, SSCursor, SSDictCursor
 
 from .config import Settings
 
@@ -181,6 +181,114 @@ class ConnectionManager:
                 else:
                     # For INSERT/UPDATE/DELETE, return affected rows
                     return cursor.rowcount
+    
+    async def execute_streaming(
+        self,
+        query: str,
+        params: Optional[tuple] = None,
+        chunk_size: int = 1000,
+        cursor_class: Type[Any] = SSDictCursor
+    ) -> AsyncIterator[List[Dict[str, Any]]]:
+        """Execute a query and stream results in chunks.
+        
+        This method is memory-efficient for large result sets as it doesn't
+        load all results into memory at once.
+        
+        Args:
+            query: SQL query to execute
+            params: Query parameters
+            chunk_size: Number of rows to fetch per chunk
+            cursor_class: Cursor class to use (default: SSDictCursor for streaming)
+            
+        Yields:
+            Chunks of query results
+            
+        Raises:
+            ConnectionPoolError: If pool is not initialized
+        """
+        async with self.get_connection() as conn:
+            # Use server-side cursor for streaming
+            async with conn.cursor(cursor_class) as cursor:
+                await cursor.execute(query, params)
+                
+                # Check if this is a SELECT query
+                if not cursor.description:
+                    return  # No results to stream
+                
+                while True:
+                    chunk = await cursor.fetchmany(chunk_size)
+                    if not chunk:
+                        break
+                    yield chunk
+    
+    async def execute_paginated(
+        self,
+        query: str,
+        params: Optional[tuple] = None,
+        page: int = 1,
+        page_size: int = 10,
+        max_page_size: int = 1000,
+        cursor_class: Type[Any] = DictCursor
+    ) -> Dict[str, Any]:
+        """Execute a query with pagination support.
+        
+        Args:
+            query: SQL query to execute
+            params: Query parameters
+            page: Page number (1-based)
+            page_size: Number of rows per page
+            max_page_size: Maximum allowed page size
+            cursor_class: Cursor class to use (default: DictCursor)
+            
+        Returns:
+            Dictionary with 'data' and 'pagination' keys
+            
+        Raises:
+            ConnectionPoolError: If pool is not initialized
+        """
+        # Validate and adjust parameters
+        page = max(1, page)  # Ensure page is at least 1
+        page_size = min(max(1, page_size), max_page_size)  # Limit page size
+        
+        # First, get the total count
+        count_query = f"SELECT COUNT(*) as total FROM ({query}) as subquery"
+        
+        async with self.get_connection() as conn:
+            async with conn.cursor(cursor_class) as cursor:
+                await cursor.execute(count_query, params)
+                count_result = await cursor.fetchone()
+                
+                if cursor_class == DictCursor:
+                    total_count = count_result["total"]
+                else:
+                    total_count = count_result[0]
+                
+                # Calculate pagination info
+                total_pages = (total_count + page_size - 1) // page_size if total_count > 0 else 0
+                
+                # Adjust page if beyond total pages
+                if page > total_pages and total_pages > 0:
+                    page = total_pages
+                
+                # Calculate offset
+                offset = (page - 1) * page_size
+                
+                # Execute paginated query
+                paginated_query = f"{query} LIMIT {page_size} OFFSET {offset}"
+                await cursor.execute(paginated_query, params)
+                data = await cursor.fetchall()
+        
+        return {
+            "data": data,
+            "pagination": {
+                "page": page,
+                "page_size": page_size,
+                "total_count": total_count,
+                "total_pages": total_pages,
+                "has_next": page < total_pages,
+                "has_previous": page > 1
+            }
+        }
     
     async def health_check(self) -> bool:
         """Check if the database connection is healthy.
