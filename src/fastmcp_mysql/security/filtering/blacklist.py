@@ -14,7 +14,7 @@ class BlacklistFilter(QueryFilter):
     def __init__(self, settings: SecuritySettings = None, additional_patterns: list[str] = None):
         """
         Initialize blacklist filter.
-        
+
         Args:
             settings: Security settings (optional)
             additional_patterns: Additional patterns to blacklist
@@ -34,25 +34,22 @@ class BlacklistFilter(QueryFilter):
     def is_allowed(self, query: str) -> bool:
         """
         Check if query passes blacklist.
-        
+
         Args:
             query: SQL query to check
-            
+
         Returns:
             False if query matches blacklist, True otherwise
         """
-        for pattern in self.patterns:
-            if pattern.search(query):
-                return False
-        return True
+        return all(not pattern.search(query) for pattern in self.patterns)
 
     def validate(self, query: str) -> None:
         """
         Validate query against blacklist.
-        
+
         Args:
             query: SQL query to validate
-            
+
         Raises:
             FilteredQueryError: If query matches blacklist
         """

@@ -78,10 +78,10 @@ def setup_logging() -> None:
 
 def setup_security(settings: Settings) -> SecurityManager | None:
     """Set up security manager if enabled.
-    
+
     Args:
         settings: Application settings
-        
+
     Returns:
         SecurityManager: Initialized security manager or None if disabled
     """
@@ -152,10 +152,10 @@ def setup_security(settings: Settings) -> SecurityManager | None:
 
 async def setup_connection(settings: Settings) -> ConnectionManager:
     """Set up database connection.
-    
+
     Args:
         settings: Application settings
-        
+
     Returns:
         ConnectionManager: Initialized connection manager
     """
@@ -178,10 +178,10 @@ async def setup_connection(settings: Settings) -> ConnectionManager:
 
 def create_server() -> FastMCP:
     """Create and configure the FastMCP server.
-    
+
     Returns:
         FastMCP: Configured FastMCP server instance
-        
+
     Raises:
         ValidationError: If required configuration is missing
     """
@@ -233,13 +233,13 @@ def create_server() -> FastMCP:
         context: Context | None = None
     ) -> dict[str, Any]:
         """Execute a MySQL query.
-        
+
         Args:
             query: SQL query to execute
             params: Optional query parameters for prepared statements
             database: Optional database name for multi-database mode
             context: FastMCP context
-            
+
         Returns:
             Dictionary containing query results or error information
         """

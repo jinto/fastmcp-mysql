@@ -19,7 +19,7 @@ def clean_env():
     original_env = os.environ.copy()
 
     # Clear MySQL-related environment variables
-    mysql_keys = [k for k in os.environ.keys() if k.startswith("MYSQL_")]
+    mysql_keys = [k for k in os.environ if k.startswith("MYSQL_")]
     for key in mysql_keys:
         del os.environ[key]
 

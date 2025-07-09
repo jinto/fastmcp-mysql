@@ -1,5 +1,7 @@
 """SQL injection detector implementation."""
 
+import builtins
+import contextlib
 import re
 import urllib.parse
 from html import unescape
@@ -26,7 +28,7 @@ class SQLInjectionDetector(InjectionDetector):
     def __init__(self, strict_mode: bool = True):
         """
         Initialize the detector.
-        
+
         Args:
             strict_mode: If True, be more aggressive in detection
         """
@@ -35,11 +37,11 @@ class SQLInjectionDetector(InjectionDetector):
     def detect(self, query: str, params: tuple | None = None) -> list[str]:
         """
         Detect potential SQL injection patterns in a query.
-        
+
         Args:
             query: SQL query to analyze
             params: Query parameters (not used in query detection)
-            
+
         Returns:
             List of detected threats. Empty if safe.
         """
@@ -100,10 +102,10 @@ class SQLInjectionDetector(InjectionDetector):
     def validate_parameters(self, params: tuple) -> list[str]:
         """
         Validate query parameters for injection attempts.
-        
+
         Args:
             params: Query parameters to validate
-            
+
         Returns:
             List of detected threats. Empty if safe.
         """
@@ -168,33 +170,23 @@ class SQLInjectionDetector(InjectionDetector):
             return True
 
         # Check for quote followed by SQL keywords
-        for pattern in QUOTE_PATTERNS:
-            if pattern.search(query):
-                return True
-
-        return False
+        return any(pattern.search(query) for pattern in QUOTE_PATTERNS)
 
     def _decode_parameter(self, param: str) -> str:
         """Decode parameter to catch encoded injection attempts."""
         decoded = param
 
         # URL decode
-        try:
+        with contextlib.suppress(builtins.BaseException):
             decoded = urllib.parse.unquote(decoded)
-        except:
-            pass
 
         # HTML entity decode
-        try:
+        with contextlib.suppress(builtins.BaseException):
             decoded = unescape(decoded)
-        except:
-            pass
 
         # Unicode decode
-        try:
+        with contextlib.suppress(builtins.BaseException):
             decoded = decoded.encode().decode('unicode_escape')
-        except:
-            pass
 
         return decoded
 
@@ -228,7 +220,4 @@ class SQLInjectionDetector(InjectionDetector):
             return True
 
         # Check with our semicolon pattern
-        if SEMICOLON_PATTERN.search(param):
-            return True
-
-        return False
+        return bool(SEMICOLON_PATTERN.search(param))

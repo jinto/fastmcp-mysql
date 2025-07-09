@@ -125,14 +125,6 @@ class TestSecurityArchitecture:
     def test_security_middleware_chain(self):
         """Test security middleware chain design."""
         # Expected middleware execution order
-        middleware_chain = [
-            "RateLimitMiddleware",      # 1. Check rate limits (fail fast)
-            "AuditLoggingMiddleware",    # 2. Log attempt
-            "SqlInjectionMiddleware",    # 3. Validate SQL injection
-            "QueryFilterMiddleware",     # 4. Apply filters
-            "ParameterSanitizer",        # 5. Sanitize parameters
-            "QueryExecutor",             # 6. Execute query
-        ]
 
         # Each middleware should have consistent interface
         class SecurityMiddleware:
@@ -232,15 +224,6 @@ class TestSecurityArchitecture:
                 pass
 
         # Expected metrics to collect
-        expected_metrics = [
-            "security.requests.total",
-            "security.requests.allowed",
-            "security.requests.blocked",
-            "security.sql_injection.attempts",
-            "security.rate_limit.exceeded",
-            "security.query_filter.blocked",
-            "security.validation.duration",
-        ]
 
     def test_security_plugin_system(self):
         """Test extensible security plugin system."""

@@ -69,7 +69,7 @@ class ConnectionManager:
 
     def __init__(self, config: ConnectionConfig):
         """Initialize connection manager.
-        
+
         Args:
             config: Connection configuration
         """
@@ -148,10 +148,10 @@ class ConnectionManager:
     @asynccontextmanager
     async def get_connection(self) -> AsyncIterator[Connection]:
         """Get a connection from the pool.
-        
+
         Yields:
             Connection object
-            
+
         Raises:
             ConnectionPoolError: If pool is not initialized
         """
@@ -168,15 +168,15 @@ class ConnectionManager:
         cursor_class: type[Any] = DictCursor
     ) -> Any:
         """Execute a query and return results.
-        
+
         Args:
             query: SQL query to execute
             params: Query parameters
             cursor_class: Cursor class to use (default: DictCursor)
-            
+
         Returns:
             Query results
-            
+
         Raises:
             ConnectionPoolError: If pool is not initialized
         """
@@ -199,19 +199,19 @@ class ConnectionManager:
         cursor_class: type[Any] = SSDictCursor
     ) -> AsyncIterator[list[dict[str, Any]]]:
         """Execute a query and stream results in chunks.
-        
+
         This method is memory-efficient for large result sets as it doesn't
         load all results into memory at once.
-        
+
         Args:
             query: SQL query to execute
             params: Query parameters
             chunk_size: Number of rows to fetch per chunk
             cursor_class: Cursor class to use (default: SSDictCursor for streaming)
-            
+
         Yields:
             Chunks of query results
-            
+
         Raises:
             ConnectionPoolError: If pool is not initialized
         """
@@ -240,7 +240,7 @@ class ConnectionManager:
         cursor_class: type[Any] = DictCursor
     ) -> dict[str, Any]:
         """Execute a query with pagination support.
-        
+
         Args:
             query: SQL query to execute
             params: Query parameters
@@ -248,10 +248,10 @@ class ConnectionManager:
             page_size: Number of rows per page
             max_page_size: Maximum allowed page size
             cursor_class: Cursor class to use (default: DictCursor)
-            
+
         Returns:
             Dictionary with 'data' and 'pagination' keys
-            
+
         Raises:
             ConnectionPoolError: If pool is not initialized
         """
@@ -301,7 +301,7 @@ class ConnectionManager:
 
     async def health_check(self) -> bool:
         """Check if the database connection is healthy.
-        
+
         Returns:
             True if healthy, False otherwise
         """
@@ -320,7 +320,7 @@ class ConnectionManager:
 
     def get_pool_metrics(self) -> dict[str, int]:
         """Get connection pool metrics.
-        
+
         Returns:
             Dictionary with pool metrics
         """
@@ -352,10 +352,10 @@ class ConnectionManager:
 
 async def create_connection_manager(settings: Settings) -> ConnectionManager:
     """Create and initialize a connection manager from settings.
-    
+
     Args:
         settings: Application settings
-        
+
     Returns:
         Initialized ConnectionManager
     """

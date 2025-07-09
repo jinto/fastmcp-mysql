@@ -73,7 +73,7 @@ class HealthChecker:
                  connection_manager: ConnectionManager | None = None,
                  cache_manager: CacheManager | None = None):
         """Initialize health checker.
-        
+
         Args:
             connection_manager: Database connection manager
             cache_manager: Cache manager
@@ -91,7 +91,7 @@ class HealthChecker:
 
     def set_threshold(self, name: str, value: float):
         """Set a health check threshold.
-        
+
         Args:
             name: Threshold name
             value: Threshold value
@@ -100,7 +100,7 @@ class HealthChecker:
 
     def register_check(self, name: str, check_func: Callable[[], Awaitable[ComponentHealth]]):
         """Register a custom health check.
-        
+
         Args:
             name: Check name
             check_func: Async function that returns ComponentHealth
@@ -317,7 +317,7 @@ class HealthChecker:
         ]
 
         # Add custom checks
-        for name, check_func in self._custom_checks.items():
+        for _name, check_func in self._custom_checks.items():
             checks.append(check_func())
 
         # Run all checks concurrently
@@ -353,7 +353,7 @@ class HealthChecker:
 
     async def check_liveness(self) -> bool:
         """Simple liveness check.
-        
+
         Returns:
             True if the service is alive
         """
@@ -362,7 +362,7 @@ class HealthChecker:
 
     async def check_readiness(self) -> bool:
         """Readiness check.
-        
+
         Returns:
             True if the service is ready to handle requests
         """

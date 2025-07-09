@@ -16,13 +16,13 @@ def create_rate_limiter(
 ) -> RateLimiter:
     """
     Create a rate limiter based on algorithm.
-    
+
     Args:
         algorithm: Rate limiting algorithm
         requests_per_minute: Default requests per minute
         burst_size: Burst size for token bucket
         per_user_limits: Per-user rate limits
-        
+
     Returns:
         Rate limiter instance
     """

@@ -12,6 +12,22 @@ and this project adheres to [Semantic Versioning](https://semver.org/spec/v2.0.0
 - Additional example scripts for common use cases
 - Performance optimization guide
 
+## [0.1.2] - 2025-01-09
+
+### Fixed
+- Fixed SpanKind import in observability module
+- Fixed AsyncMock usage in tests for Python 3.13
+- Applied comprehensive code formatting with ruff
+- Fixed deprecated type hints (Optional[X] to X | None)
+- Fixed import ordering and removed unused imports
+- Fixed trailing whitespace and missing newlines
+- Fixed CI/CD pipeline issues with uv/uvx commands
+
+### Changed
+- Upgraded GitHub Actions: artifact actions v3→v4, CodeQL v2→v3
+- Modernized type hints throughout the codebase
+- Improved code consistency and formatting
+
 ## [0.1.1] - 2025-01-09
 
 ### Added

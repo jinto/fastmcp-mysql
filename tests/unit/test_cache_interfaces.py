@@ -215,7 +215,7 @@ class TestCacheConfig:
         """Test default cache configuration."""
         config = CacheConfig()
 
-        assert config.enabled == True
+        assert config.enabled
         assert config.ttl == 300  # 5 minutes default
         assert config.max_size == 1000
         assert config.eviction_policy == "lru"
@@ -229,7 +229,7 @@ class TestCacheConfig:
             eviction_policy="lfu"
         )
 
-        assert config.enabled == False
+        assert not config.enabled
         assert config.ttl == 600
         assert config.max_size == 5000
         assert config.eviction_policy == "lfu"
@@ -245,7 +245,7 @@ class TestCacheConfig:
 
         config = CacheConfig.from_env()
 
-        assert config.enabled == True
+        assert config.enabled
         assert config.ttl == 1800
         assert config.max_size == 2000
 
@@ -336,7 +336,7 @@ class TestMockCache:
         assert await cache.get("nonexistent") is None
 
         # Test delete
-        assert await cache.delete("key1") == True
+        assert await cache.delete("key1")
         assert await cache.get("key1") is None
 
         # Test stats

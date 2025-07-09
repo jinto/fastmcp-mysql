@@ -321,13 +321,12 @@ class TestMySQLQueryTool:
 
             mock_conn_manager.execute.return_value = []
 
-            result = await mysql_query(
+            await mysql_query(
                 query="SELECT * FROM products",
                 database="shop_db"
             )
 
             # Should prefix table with database name
-            expected_query = "SELECT * FROM shop_db.products"
             mock_conn_manager.execute.assert_called_once()
 
             # Check if query was modified to include database prefix
@@ -341,7 +340,6 @@ class TestMySQLQueryTool:
         from fastmcp_mysql.tools.query import set_security_manager
 
         # Save current security manager
-        original_security = None
         try:
             # Temporarily disable security
             set_security_manager(None)

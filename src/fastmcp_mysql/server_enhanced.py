@@ -57,7 +57,7 @@ def setup_observability(settings: Settings) -> None:
 
 async def create_enhanced_server() -> FastMCP:
     """Create FastMCP server with observability features.
-    
+
     Returns:
         Configured FastMCP server instance
     """
@@ -121,13 +121,13 @@ async def create_enhanced_server() -> FastMCP:
         context: Context | None = None
     ) -> dict[str, Any]:
         """Execute a MySQL query with observability.
-        
+
         Args:
             query: SQL query to execute
             params: Optional query parameters
             database: Optional database name
             context: FastMCP context
-            
+
         Returns:
             Query execution result
         """
@@ -189,7 +189,7 @@ async def create_enhanced_server() -> FastMCP:
     @mcp.tool
     async def mysql_health() -> dict[str, Any]:
         """Get health status of MySQL server.
-        
+
         Returns:
             Health check results
         """
@@ -205,7 +205,7 @@ async def create_enhanced_server() -> FastMCP:
     @mcp.tool
     async def mysql_metrics() -> dict[str, Any]:
         """Get current metrics.
-        
+
         Returns:
             Current metrics data
         """
@@ -214,7 +214,7 @@ async def create_enhanced_server() -> FastMCP:
     @mcp.tool
     async def mysql_metrics_prometheus() -> str:
         """Get metrics in Prometheus format.
-        
+
         Returns:
             Metrics in Prometheus text format
         """

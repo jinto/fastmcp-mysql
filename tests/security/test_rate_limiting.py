@@ -131,12 +131,12 @@ class TestRateLimiting:
         )
 
         # Regular user hits limit at 5 (burst size)
-        for i in range(5):
+        for _i in range(5):
             assert await limiter.check_limit("regular_user") is True
         assert await limiter.check_limit("regular_user") is False
 
         # Special user has higher limit
-        for i in range(10):
+        for _i in range(10):
             assert await limiter.check_limit("special_user") is True
         # But eventually hits their limit too
         assert await limiter.check_limit("special_user") is False

@@ -106,7 +106,7 @@ class TestSecurityIntegration:
         await security_manager.rate_limiter.reset("anonymous")
 
         # Execute queries up to burst limit
-        for i in range(2):  # burst_size = 2
+        for _i in range(2):  # burst_size = 2
             result = await mysql_query(query="SELECT 1")
             assert result["success"] is True
 
@@ -160,7 +160,7 @@ class TestSecurityIntegration:
 
         # Execute queries with context
         # This user should have their own limit
-        for i in range(3):  # burst_size = 3
+        for _i in range(3):  # burst_size = 3
             result = await mysql_query(
                 query="SELECT 1",
                 context=mock_context

@@ -10,11 +10,11 @@ class InjectionDetector(ABC):
     def detect(self, query: str, params: tuple | None = None) -> list[str]:
         """
         Detect potential SQL injection patterns.
-        
+
         Args:
             query: SQL query to analyze
             params: Query parameters
-            
+
         Returns:
             List of detected threats/patterns. Empty list if safe.
         """
@@ -24,10 +24,10 @@ class InjectionDetector(ABC):
     def validate_parameters(self, params: tuple) -> list[str]:
         """
         Validate query parameters for injection attempts.
-        
+
         Args:
             params: Query parameters to validate
-            
+
         Returns:
             List of detected threats. Empty list if safe.
         """

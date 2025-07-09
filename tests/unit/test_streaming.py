@@ -162,7 +162,7 @@ class TestStreaming:
 
         # Test error handling
         with pytest.raises(aiomysql.Error):
-            async for chunk in manager.execute_streaming("SELECT * FROM bad_table"):
+            async for _chunk in manager.execute_streaming("SELECT * FROM bad_table"):
                 pass
 
     @pytest.mark.asyncio
@@ -235,7 +235,7 @@ class TestStreaming:
         manager.get_connection.return_value.__aenter__.return_value = mock_conn
 
         # Process streaming
-        async for chunk in manager.execute_streaming(
+        async for _chunk in manager.execute_streaming(
             "SELECT * FROM huge_table",
             chunk_size=100
         ):
@@ -269,7 +269,7 @@ class TestStreaming:
 
         async def stream_with_cancel():
             nonlocal chunks_received
-            async for chunk in manager.execute_streaming("SELECT * FROM infinite"):
+            async for _chunk in manager.execute_streaming("SELECT * FROM infinite"):
                 chunks_received += 1
                 if chunks_received >= 3:
                     raise asyncio.CancelledError()

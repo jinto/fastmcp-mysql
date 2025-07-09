@@ -335,7 +335,6 @@ class TestPagination:
 
         # Paginated queries should be cacheable with page info in key
         query = "SELECT * FROM users"
-        page = 2
         page_size = 10
 
         # Generate cache keys for different pages

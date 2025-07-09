@@ -10,7 +10,7 @@ from .server import create_server, setup_logging
 
 def main(argv: list[str] | None = None) -> None:
     """Main entry point for the FastMCP MySQL server.
-    
+
     Args:
         argv: Command line arguments (for testing)
     """

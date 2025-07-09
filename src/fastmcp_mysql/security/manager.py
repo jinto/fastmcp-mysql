@@ -41,7 +41,7 @@ class SecurityManager:
     ):
         """
         Initialize security manager.
-        
+
         Args:
             settings: Security configuration
             query_filter: Query filter implementation
@@ -62,12 +62,12 @@ class SecurityManager:
     ) -> None:
         """
         Validate a query against all security rules.
-        
+
         Args:
             query: SQL query to validate
             params: Query parameters
             context: Security context
-            
+
         Raises:
             SecurityError: If validation fails
         """

@@ -64,7 +64,7 @@ class QueryValidator:
         allow_delete: bool = False,
     ):
         """Initialize query validator.
-        
+
         Args:
             allow_insert: Whether INSERT operations are allowed
             allow_update: Whether UPDATE operations are allowed
@@ -93,10 +93,10 @@ class QueryValidator:
 
     def get_query_type(self, query: str) -> QueryType:
         """Determine the type of SQL query.
-        
+
         Args:
             query: SQL query string
-            
+
         Returns:
             QueryType enum value
         """
@@ -110,11 +110,11 @@ class QueryValidator:
 
     def validate_query(self, query: str, allow_write: bool = True) -> None:
         """Validate a SQL query.
-        
+
         Args:
             query: SQL query to validate
             allow_write: Whether write operations are allowed for this request
-            
+
         Raises:
             ValueError: If query is not allowed
         """
@@ -154,7 +154,7 @@ class QueryExecutor:
         validator: QueryValidator
     ):
         """Initialize query executor.
-        
+
         Args:
             connection_manager: Database connection manager
             validator: Query validator instance
@@ -170,13 +170,13 @@ class QueryExecutor:
         context: SecurityContext | None = None
     ) -> dict[str, Any]:
         """Execute a SQL query.
-        
+
         Args:
             query: SQL query to execute
             params: Query parameters for prepared statement
             database: Optional database name to prefix tables with
             context: Security context for the request
-            
+
         Returns:
             Dictionary with execution results
         """
@@ -239,13 +239,13 @@ class QueryExecutor:
 
     def _add_database_prefix(self, query: str, database: str) -> str:
         """Add database prefix to table names in query.
-        
+
         This is a simple implementation. In production, use a proper SQL parser.
-        
+
         Args:
             query: Original SQL query
             database: Database name to prefix
-            
+
         Returns:
             Modified query with database prefixes
         """
@@ -256,10 +256,10 @@ class QueryExecutor:
 
 def format_query_result(result: dict[str, Any]) -> dict[str, Any]:
     """Format query result for output.
-    
+
     Args:
         result: Raw query result
-        
+
     Returns:
         Formatted result dictionary
     """
@@ -300,15 +300,15 @@ async def mysql_query(
     context: Context | None = None
 ) -> dict[str, Any]:
     """Execute a MySQL query.
-    
+
     This is the main tool function exposed to FastMCP.
-    
+
     Args:
         query: SQL query to execute
         params: Optional query parameters for prepared statements
         database: Optional database name for multi-database mode
         context: FastMCP context (optional)
-        
+
     Returns:
         Dictionary containing query results or error information
     """

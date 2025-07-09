@@ -57,7 +57,7 @@ class QueryMetrics:
             return {"p50": 0, "p90": 0, "p95": 0, "p99": 0}
 
         times = sorted(self.query_times)
-        length = len(times)
+        len(times)
         return {
             "p50": float(np.percentile(times, 50)),
             "p90": float(np.percentile(times, 90)),
@@ -517,7 +517,7 @@ class LogRotator:
     def __init__(self, filename: str, max_bytes: int = 10485760, backup_count: int = 5):
         """
         Initialize log rotator.
-        
+
         Args:
             filename: Log file path
             max_bytes: Maximum file size before rotation (default 10MB)

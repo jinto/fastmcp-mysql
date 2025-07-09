@@ -36,7 +36,7 @@ class EnhancedJSONFormatter(logging.Formatter):
 
     def __init__(self, include_hostname: bool = True, include_process_info: bool = True):
         """Initialize enhanced formatter.
-        
+
         Args:
             include_hostname: Whether to include hostname in logs
             include_process_info: Whether to include process/thread info
@@ -91,7 +91,7 @@ class EnhancedJSONFormatter(logging.Formatter):
                     try:
                         if hasattr(value, "to_dict"):
                             log_data[key] = value.to_dict()
-                        elif isinstance(value, (dict, list, str, int, float, bool, type(None))):
+                        elif isinstance(value, dict | list | str | int | float | bool | type(None)):
                             log_data[key] = value
                         else:
                             log_data[key] = str(value)
@@ -114,7 +114,7 @@ class ContextLogger:
 
     def __init__(self, logger: logging.Logger):
         """Initialize context logger.
-        
+
         Args:
             logger: Underlying logger instance
         """
@@ -161,7 +161,7 @@ class MetricsLogger:
 
     def __init__(self, logger: logging.Logger):
         """Initialize metrics logger.
-        
+
         Args:
             logger: Underlying logger instance
         """
@@ -234,12 +234,12 @@ class MetricsLogger:
 def setup_rotating_file_handler(log_dir: Path, max_bytes: int = 100 * 1024 * 1024,
                                backup_count: int = 10) -> logging.Handler:
     """Set up rotating file handler.
-    
+
     Args:
         log_dir: Directory for log files
         max_bytes: Maximum size per log file
         backup_count: Number of backup files to keep
-        
+
     Returns:
         Configured rotating file handler
     """
@@ -275,11 +275,11 @@ def setup_rotating_file_handler(log_dir: Path, max_bytes: int = 100 * 1024 * 102
 @contextmanager
 def request_context(request_id: str | None = None, **kwargs):
     """Context manager for request-scoped logging context.
-    
+
     Args:
         request_id: Request ID (generated if not provided)
         **kwargs: Additional context fields
-        
+
     Example:
         with request_context(user_id="user123"):
             logger.info("Processing request")
@@ -309,7 +309,7 @@ def setup_enhanced_logging(log_level: LogLevel = LogLevel.INFO,
                           enable_file_logging: bool = True,
                           enable_console_logging: bool = True) -> None:
     """Set up enhanced logging system.
-    
+
     Args:
         log_level: Logging level
         log_dir: Directory for log files (if file logging enabled)

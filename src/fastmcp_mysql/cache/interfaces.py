@@ -260,7 +260,7 @@ class CacheInterface(ABC):
         value = await self.get(key)
         if value is None:
             value = 0
-        elif not isinstance(value, (int, float)):
+        elif not isinstance(value, int | float):
             raise ValueError(f"Cannot increment non-numeric value: {value}")
 
         new_value = value + delta

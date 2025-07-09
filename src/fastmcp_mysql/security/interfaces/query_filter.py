@@ -10,10 +10,10 @@ class QueryFilter(ABC):
     def is_allowed(self, query: str) -> bool:
         """
         Check if a query is allowed.
-        
+
         Args:
             query: SQL query to check
-            
+
         Returns:
             True if allowed, False otherwise
         """
@@ -23,10 +23,10 @@ class QueryFilter(ABC):
     def validate(self, query: str) -> None:
         """
         Validate a query and raise exception if not allowed.
-        
+
         Args:
             query: SQL query to validate
-            
+
         Raises:
             FilteredQueryError: If query is not allowed
         """

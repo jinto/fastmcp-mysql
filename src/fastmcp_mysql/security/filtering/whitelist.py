@@ -13,7 +13,7 @@ class WhitelistFilter(QueryFilter):
     def __init__(self, patterns: list[str]):
         """
         Initialize whitelist filter.
-        
+
         Args:
             patterns: List of regex patterns for allowed queries
         """
@@ -26,25 +26,22 @@ class WhitelistFilter(QueryFilter):
     def is_allowed(self, query: str) -> bool:
         """
         Check if query matches whitelist.
-        
+
         Args:
             query: SQL query to check
-            
+
         Returns:
             True if query matches whitelist, False otherwise
         """
-        for pattern in self.patterns:
-            if pattern.match(query):
-                return True
-        return False
+        return any(pattern.match(query) for pattern in self.patterns)
 
     def validate(self, query: str) -> None:
         """
         Validate query against whitelist.
-        
+
         Args:
             query: SQL query to validate
-            
+
         Raises:
             FilteredQueryError: If query doesn't match whitelist
         """

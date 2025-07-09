@@ -41,7 +41,7 @@ class TokenBucketLimiter(RateLimiter):
     ):
         """
         Initialize token bucket limiter.
-        
+
         Args:
             requests_per_minute: Requests allowed per minute
             burst_size: Maximum burst size
@@ -77,10 +77,10 @@ class TokenBucketLimiter(RateLimiter):
     async def check_limit(self, identifier: str) -> bool:
         """
         Check if request is within rate limit.
-        
+
         Args:
             identifier: User identifier
-            
+
         Returns:
             True if allowed, False if rate limited
         """
@@ -97,7 +97,7 @@ class TokenBucketLimiter(RateLimiter):
     async def reset(self, identifier: str) -> None:
         """
         Reset rate limit for identifier.
-        
+
         Args:
             identifier: User identifier to reset
         """

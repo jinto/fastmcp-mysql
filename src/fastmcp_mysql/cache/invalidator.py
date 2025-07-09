@@ -35,7 +35,7 @@ class CacheInvalidator:
 
     def __init__(self, strategy: InvalidationStrategy = InvalidationStrategy.AGGRESSIVE):
         """Initialize cache invalidator.
-        
+
         Args:
             strategy: Invalidation strategy to use
         """
@@ -45,10 +45,10 @@ class CacheInvalidator:
 
     def get_query_type(self, query: str) -> QueryType:
         """Determine the type of SQL query.
-        
+
         Args:
             query: SQL query string
-            
+
         Returns:
             QueryType enum value
         """
@@ -69,10 +69,10 @@ class CacheInvalidator:
 
     def extract_tables(self, query: str) -> list[str]:
         """Extract table names from a query.
-        
+
         Args:
             query: SQL query string
-            
+
         Returns:
             List of table names found in the query
         """
@@ -111,7 +111,7 @@ class CacheInvalidator:
 
     def add_dependency(self, table: str, depends_on: list[str]) -> None:
         """Add table dependencies.
-        
+
         Args:
             table: Table name
             depends_on: List of tables this table depends on
@@ -125,7 +125,7 @@ class CacheInvalidator:
 
     def remove_dependency(self, table: str, dependency: str) -> None:
         """Remove a specific dependency.
-        
+
         Args:
             table: Table name
             dependency: Dependency to remove
@@ -135,10 +135,10 @@ class CacheInvalidator:
 
     def get_dependencies(self, table: str) -> list[str]:
         """Get direct dependencies for a table.
-        
+
         Args:
             table: Table name
-            
+
         Returns:
             List of direct dependencies
         """
@@ -146,11 +146,11 @@ class CacheInvalidator:
 
     def get_all_dependencies(self, table: str, visited: set[str] | None = None) -> list[str]:
         """Get all dependencies (including transitive) for a table.
-        
+
         Args:
             table: Table name
             visited: Set of already visited tables (for cycle detection)
-            
+
         Returns:
             List of all dependencies
         """
@@ -178,11 +178,11 @@ class CacheInvalidator:
 
     def generate_pattern(self, table: str, prefix: str | None = None) -> str:
         """Generate cache key pattern for a table.
-        
+
         Args:
             table: Table name
             prefix: Optional prefix (e.g., database name)
-            
+
         Returns:
             Cache key pattern
         """
@@ -192,11 +192,11 @@ class CacheInvalidator:
 
     def generate_patterns(self, tables: list[str], prefix: str | None = None) -> list[str]:
         """Generate cache key patterns for multiple tables.
-        
+
         Args:
             tables: List of table names
             prefix: Optional prefix
-            
+
         Returns:
             List of cache key patterns
         """
@@ -210,7 +210,7 @@ class CacheInvalidator:
         targeted: bool = False
     ) -> None:
         """Invalidate cache entries based on a write operation.
-        
+
         Args:
             query: SQL query that modifies data
             cache: Cache instance to invalidate
@@ -257,7 +257,7 @@ class CacheInvalidator:
         database: str | None = None
     ) -> None:
         """Invalidate cache for a batch of queries.
-        
+
         Args:
             queries: List of SQL queries
             cache: Cache instance
@@ -301,10 +301,10 @@ class CacheInvalidator:
 
     def analyze_where_clause(self, query: str) -> dict[str, any] | None:
         """Analyze WHERE clause for targeted invalidation.
-        
+
         Args:
             query: SQL query
-            
+
         Returns:
             Dictionary with WHERE clause analysis or None
         """

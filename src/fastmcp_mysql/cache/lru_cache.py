@@ -1,5 +1,6 @@
 """LRU (Least Recently Used) cache implementation."""
 import asyncio
+import contextlib
 import fnmatch
 from collections import OrderedDict
 from datetime import datetime, timedelta
@@ -10,7 +11,7 @@ from .interfaces import CacheConfig, CacheEntry, CacheInterface, CacheStats
 
 class LRUCache(CacheInterface):
     """Least Recently Used cache implementation.
-    
+
     Features:
     - LRU eviction policy
     - TTL support
@@ -21,7 +22,7 @@ class LRUCache(CacheInterface):
 
     def __init__(self, config: CacheConfig):
         """Initialize LRU cache.
-        
+
         Args:
             config: Cache configuration
         """
@@ -236,10 +237,8 @@ class LRUCache(CacheInterface):
         # Cancel cleanup task
         if self._cleanup_task:
             self._cleanup_task.cancel()
-            try:
+            with contextlib.suppress(asyncio.CancelledError):
                 await self._cleanup_task
-            except asyncio.CancelledError:
-                pass
 
         # Clear cache
         await self.clear()

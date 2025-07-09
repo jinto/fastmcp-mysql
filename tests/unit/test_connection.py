@@ -1,5 +1,6 @@
 """Unit tests for database connection management."""
 
+import contextlib
 from unittest.mock import AsyncMock, MagicMock, Mock, patch
 
 import aiomysql
@@ -224,7 +225,7 @@ class TestConnectionManager:
         mock_pool.acquire.return_value = mock_acquire_cm
         manager._pool = mock_pool
 
-        result = await manager.execute(
+        await manager.execute(
             "SELECT * FROM users",
             cursor_class=aiomysql.DictCursor
         )
@@ -345,10 +346,8 @@ class TestConnectionRetry:
             mock_create.side_effect = OperationalError("Connection failed")
 
             with patch("asyncio.sleep", new_callable=AsyncMock) as mock_sleep:
-                try:
+                with contextlib.suppress(ConnectionPoolError):
                     await manager.initialize()
-                except ConnectionPoolError:
-                    pass
 
                 # Check exponential backoff delays
                 expected_delays = [1, 2]  # 1s, 2s for retries

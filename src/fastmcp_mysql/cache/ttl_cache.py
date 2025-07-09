@@ -1,5 +1,6 @@
 """TTL-based cache implementation."""
 import asyncio
+import contextlib
 import fnmatch
 from collections import OrderedDict
 from datetime import datetime, timedelta
@@ -10,7 +11,7 @@ from .interfaces import CacheConfig, CacheEntry, CacheInterface, CacheStats
 
 class TTLCache(CacheInterface):
     """Time-To-Live based cache implementation.
-    
+
     Features:
     - Configurable TTL for entries
     - Automatic expiration
@@ -21,7 +22,7 @@ class TTLCache(CacheInterface):
 
     def __init__(self, config: CacheConfig):
         """Initialize TTL cache.
-        
+
         Args:
             config: Cache configuration
         """
@@ -221,10 +222,8 @@ class TTLCache(CacheInterface):
         # Cancel cleanup task
         if self._cleanup_task:
             self._cleanup_task.cancel()
-            try:
+            with contextlib.suppress(asyncio.CancelledError):
                 await self._cleanup_task
-            except asyncio.CancelledError:
-                pass
 
         # Clear cache
         await self.clear()

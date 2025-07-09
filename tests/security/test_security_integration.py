@@ -1,5 +1,6 @@
 """Integration tests for security components."""
 
+import contextlib
 from unittest.mock import Mock
 
 import pytest
@@ -202,14 +203,12 @@ class TestSecurityIntegration:
         )
 
         # Trigger injection error
-        try:
+        with contextlib.suppress(InjectionError):
             await manager.validate_query(
                 "SELECT * FROM users WHERE id = %s",
                 ("1' OR '1'='1",),
                 context
             )
-        except InjectionError:
-            pass
 
         # Verify context was logged
         # Logger would be called with context information

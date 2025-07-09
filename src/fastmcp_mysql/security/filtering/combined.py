@@ -10,7 +10,7 @@ class CombinedFilter(QueryFilter):
     def __init__(self, filters: list[QueryFilter]):
         """
         Initialize combined filter.
-        
+
         Args:
             filters: List of filters to combine
         """
@@ -19,25 +19,22 @@ class CombinedFilter(QueryFilter):
     def is_allowed(self, query: str) -> bool:
         """
         Check if query passes all filters.
-        
+
         Args:
             query: SQL query to check
-            
+
         Returns:
             True if all filters allow the query, False otherwise
         """
-        for filter in self.filters:
-            if not filter.is_allowed(query):
-                return False
-        return True
+        return all(filter.is_allowed(query) for filter in self.filters)
 
     def validate(self, query: str) -> None:
         """
         Validate query against all filters.
-        
+
         Args:
             query: SQL query to validate
-            
+
         Raises:
             FilteredQueryError: If any filter rejects the query
         """

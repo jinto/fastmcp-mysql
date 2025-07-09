@@ -12,14 +12,14 @@ logger = logging.getLogger(__name__)
 
 class CacheManager:
     """Manages caching for MySQL queries.
-    
+
     Coordinates between cache implementations, key generation,
     and invalidation strategies.
     """
 
     def __init__(self, config: CacheConfig):
         """Initialize cache manager.
-        
+
         Args:
             config: Cache configuration
         """
@@ -47,10 +47,10 @@ class CacheManager:
 
     def is_cacheable_query(self, query: str) -> bool:
         """Check if a query should be cached.
-        
+
         Args:
             query: SQL query
-            
+
         Returns:
             True if query should be cached
         """
@@ -68,12 +68,12 @@ class CacheManager:
         database: str | None = None
     ) -> Any | None:
         """Get cached query result.
-        
+
         Args:
             query: SQL query
             params: Query parameters
             database: Database name
-            
+
         Returns:
             Cached result or None if not found
         """
@@ -109,7 +109,7 @@ class CacheManager:
         ttl: int | None = None
     ) -> None:
         """Cache a query result.
-        
+
         Args:
             query: SQL query
             result: Query result to cache
@@ -136,7 +136,7 @@ class CacheManager:
         database: str | None = None
     ) -> None:
         """Invalidate cache entries affected by a write operation.
-        
+
         Args:
             query: Write query (INSERT/UPDATE/DELETE)
             database: Database name
@@ -155,7 +155,7 @@ class CacheManager:
         database: str | None = None
     ) -> None:
         """Invalidate cache for a batch of queries.
-        
+
         Args:
             queries: List of queries
             database: Database name
@@ -169,7 +169,7 @@ class CacheManager:
 
     def add_table_dependency(self, table: str, depends_on: list[str]) -> None:
         """Add table dependencies for invalidation.
-        
+
         Args:
             table: Table name
             depends_on: List of tables this table depends on
@@ -184,7 +184,7 @@ class CacheManager:
 
     async def get_stats(self) -> dict[str, Any]:
         """Get cache statistics.
-        
+
         Returns:
             Dictionary with cache statistics
         """
@@ -223,7 +223,7 @@ class CacheManager:
         database: str | None = None
     ) -> None:
         """Warm up cache with pre-computed results.
-        
+
         Args:
             queries: List of (query, params, result) tuples
             database: Database name
@@ -243,12 +243,12 @@ class CacheManager:
         database: str | None = None
     ) -> str:
         """Get the cache key for a query (for debugging).
-        
+
         Args:
             query: SQL query
             params: Query parameters
             database: Database name
-            
+
         Returns:
             Cache key
         """

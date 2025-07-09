@@ -97,7 +97,7 @@ class TracingManager:
                  otlp_endpoint: str | None = None,
                  enabled: bool = True):
         """Initialize tracing manager.
-        
+
         Args:
             service_name: Service name for traces
             otlp_endpoint: OpenTelemetry collector endpoint
@@ -142,12 +142,12 @@ class TracingManager:
     async def span(self, operation_name: str, kind: SpanKind = SpanKind.INTERNAL,
                    attributes: dict[str, Any] | None = None) -> AsyncIterator[SpanContext]:
         """Create a new span.
-        
+
         Args:
             operation_name: Name of the operation
             kind: Type of span
             attributes: Initial span attributes
-            
+
         Yields:
             SpanContext for the span
         """
@@ -286,12 +286,12 @@ def setup_tracing(service_name: str = "fastmcp-mysql",
                  otlp_endpoint: str | None = None,
                  enabled: bool = True) -> TracingManager:
     """Set up global tracing manager.
-    
+
     Args:
         service_name: Service name for traces
         otlp_endpoint: OpenTelemetry collector endpoint
         enabled: Whether tracing is enabled
-        
+
     Returns:
         Configured TracingManager
     """
