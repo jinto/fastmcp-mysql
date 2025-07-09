@@ -1,7 +1,7 @@
 """Security configuration for FastMCP MySQL."""
 
-from typing import Dict, List, Optional
 from enum import Enum
+
 from pydantic import BaseModel, Field
 
 
@@ -21,7 +21,7 @@ class FilterMode(str, Enum):
 
 class SecuritySettings(BaseModel):
     """Security configuration settings."""
-    
+
     # SQL Injection Prevention
     enable_injection_detection: bool = Field(
         default=True,
@@ -35,17 +35,17 @@ class SecuritySettings(BaseModel):
         default=1000,
         description="Maximum allowed parameter length"
     )
-    
+
     # Query Filtering
     filter_mode: FilterMode = Field(
         default=FilterMode.BLACKLIST,
         description="Query filtering mode"
     )
-    whitelist_patterns: List[str] = Field(
+    whitelist_patterns: list[str] = Field(
         default_factory=list,
         description="Regex patterns for allowed queries"
     )
-    blacklist_patterns: List[str] = Field(
+    blacklist_patterns: list[str] = Field(
         default_factory=lambda: [
             # DDL operations (already blocked in query validator)
             r".*\b(CREATE|DROP|ALTER|TRUNCATE)\s+(TABLE|DATABASE|INDEX|VIEW)\b.*",
@@ -63,7 +63,7 @@ class SecuritySettings(BaseModel):
         ],
         description="Regex patterns for blocked queries"
     )
-    
+
     # Rate Limiting
     enable_rate_limiting: bool = Field(
         default=True,
@@ -81,11 +81,11 @@ class SecuritySettings(BaseModel):
         default=10,
         description="Burst size for token bucket"
     )
-    rate_limit_per_user: Dict[str, int] = Field(
+    rate_limit_per_user: dict[str, int] = Field(
         default_factory=dict,
         description="Per-user rate limits"
     )
-    
+
     # Security Logging
     log_security_events: bool = Field(
         default=True,

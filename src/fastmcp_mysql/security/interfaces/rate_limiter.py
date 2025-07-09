@@ -5,7 +5,7 @@ from abc import ABC, abstractmethod
 
 class RateLimiter(ABC):
     """Abstract base class for rate limiters."""
-    
+
     @abstractmethod
     async def check_limit(self, identifier: str) -> bool:
         """
@@ -18,7 +18,7 @@ class RateLimiter(ABC):
             True if allowed, False if rate limited
         """
         pass
-    
+
     @abstractmethod
     async def reset(self, identifier: str) -> None:
         """

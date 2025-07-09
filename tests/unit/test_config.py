@@ -16,11 +16,11 @@ class TestSettings:
         """Test that required fields raise ValidationError when missing."""
         with pytest.raises(ValidationError) as exc_info:
             Settings(_env_file=None)
-        
+
         errors = exc_info.value.errors()
         required_fields = {"user", "password"}
         missing_fields = {error["loc"][0] for error in errors}
-        
+
         assert required_fields == missing_fields
 
     def test_default_values(self):
@@ -30,22 +30,22 @@ class TestSettings:
             "MYSQL_PASSWORD": "testpass"
         }):
             settings = Settings(_env_file=None)
-            
+
             # Connection defaults
             assert settings.host == "127.0.0.1"
             assert settings.port == 3306
             assert settings.db is None  # DB is optional
-            
+
             # Security defaults (all false)
             assert settings.allow_insert is False
             assert settings.allow_update is False
             assert settings.allow_delete is False
-            
+
             # Performance defaults
             assert settings.pool_size == 10
             assert settings.query_timeout == 30000
             assert settings.cache_ttl == 60000
-            
+
             # Logging default
             assert settings.log_level == "INFO"
 
@@ -65,10 +65,10 @@ class TestSettings:
             "MYSQL_CACHE_TTL": "120000",
             "MYSQL_LOG_LEVEL": "DEBUG"
         }
-        
+
         with patch.dict(os.environ, env_vars):
             settings = Settings(_env_file=None)
-            
+
             assert settings.host == "192.168.1.100"
             assert settings.port == 3307
             assert settings.user == "myuser"
@@ -90,11 +90,11 @@ class TestSettings:
             "MYSQL_DB": "testdb",
             "MYSQL_PORT": "invalid"
         }
-        
+
         with patch.dict(os.environ, env_vars):
             with pytest.raises(ValidationError) as exc_info:
                 Settings(_env_file=None)
-            
+
             errors = exc_info.value.errors()
             assert any(error["loc"][0] == "port" for error in errors)
 
@@ -106,11 +106,11 @@ class TestSettings:
             "MYSQL_DB": "testdb",
             "MYSQL_POOL_SIZE": "0"
         }
-        
+
         with patch.dict(os.environ, env_vars):
             with pytest.raises(ValidationError) as exc_info:
                 Settings(_env_file=None)
-            
+
             errors = exc_info.value.errors()
             assert any(error["loc"][0] == "pool_size" for error in errors)
 
@@ -122,11 +122,11 @@ class TestSettings:
             "MYSQL_DB": "testdb",
             "MYSQL_LOG_LEVEL": "INVALID"
         }
-        
+
         with patch.dict(os.environ, env_vars):
             with pytest.raises(ValidationError) as exc_info:
                 Settings(_env_file=None)
-            
+
             errors = exc_info.value.errors()
             assert any(error["loc"][0] == "log_level" for error in errors)
 
@@ -139,17 +139,17 @@ class TestSettings:
             "MYSQL_DB": "testdb"
         }):
             settings = Settings(_env_file=None)
-            
+
             expected = "mysql://testuser:***@127.0.0.1:3306/testdb"
             assert settings.connection_string_safe == expected
-            
+
         # Test without DB
         with patch.dict(os.environ, {
             "MYSQL_USER": "testuser",
             "MYSQL_PASSWORD": "testpass"
         }):
             settings = Settings(_env_file=None)
-            
+
             expected = "mysql://testuser:***@127.0.0.1:3306/"
             assert settings.connection_string_safe == expected
 
@@ -162,7 +162,7 @@ class TestSettings:
         }):
             settings = Settings(_env_file=None)
             settings_dict = settings.to_dict_safe()
-            
+
             # Check if password is masked
             assert settings_dict.get("password") == "***"
             assert "supersecret" not in str(settings_dict)

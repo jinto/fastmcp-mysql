@@ -1,15 +1,13 @@
 """Combined query filter."""
 
-from typing import List
 
 from ..interfaces import QueryFilter
-from ..exceptions import FilteredQueryError
 
 
 class CombinedFilter(QueryFilter):
     """Combine multiple filters with AND logic."""
-    
-    def __init__(self, filters: List[QueryFilter]):
+
+    def __init__(self, filters: list[QueryFilter]):
         """
         Initialize combined filter.
         
@@ -17,7 +15,7 @@ class CombinedFilter(QueryFilter):
             filters: List of filters to combine
         """
         self.filters = filters
-    
+
     def is_allowed(self, query: str) -> bool:
         """
         Check if query passes all filters.
@@ -32,7 +30,7 @@ class CombinedFilter(QueryFilter):
             if not filter.is_allowed(query):
                 return False
         return True
-    
+
     def validate(self, query: str) -> None:
         """
         Validate query against all filters.

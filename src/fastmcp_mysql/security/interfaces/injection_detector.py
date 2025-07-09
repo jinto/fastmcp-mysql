@@ -1,14 +1,13 @@
 """SQL injection detector interface for clean architecture."""
 
 from abc import ABC, abstractmethod
-from typing import List, Optional
 
 
 class InjectionDetector(ABC):
     """Abstract base class for SQL injection detectors."""
-    
+
     @abstractmethod
-    def detect(self, query: str, params: Optional[tuple] = None) -> List[str]:
+    def detect(self, query: str, params: tuple | None = None) -> list[str]:
         """
         Detect potential SQL injection patterns.
         
@@ -20,9 +19,9 @@ class InjectionDetector(ABC):
             List of detected threats/patterns. Empty list if safe.
         """
         pass
-    
+
     @abstractmethod
-    def validate_parameters(self, params: tuple) -> List[str]:
+    def validate_parameters(self, params: tuple) -> list[str]:
         """
         Validate query parameters for injection attempts.
         

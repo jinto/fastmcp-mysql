@@ -1,8 +1,7 @@
 """Cache invalidation logic for query operations."""
 import re
-from enum import Enum
-from typing import Dict, List, Optional, Set
 from dataclasses import dataclass, field
+from enum import Enum
 
 from .interfaces import CacheInterface, CacheKeyGenerator
 
@@ -28,12 +27,12 @@ class InvalidationStrategy(Enum):
 class TableDependency:
     """Represents dependencies between tables."""
     table: str
-    depends_on: List[str] = field(default_factory=list)
+    depends_on: list[str] = field(default_factory=list)
 
 
 class CacheInvalidator:
     """Manages cache invalidation for database operations."""
-    
+
     def __init__(self, strategy: InvalidationStrategy = InvalidationStrategy.AGGRESSIVE):
         """Initialize cache invalidator.
         
@@ -42,8 +41,8 @@ class CacheInvalidator:
         """
         self.strategy = strategy
         self.key_generator = CacheKeyGenerator()
-        self._dependencies: Dict[str, List[str]] = {}
-    
+        self._dependencies: dict[str, list[str]] = {}
+
     def get_query_type(self, query: str) -> QueryType:
         """Determine the type of SQL query.
         
@@ -54,7 +53,7 @@ class CacheInvalidator:
             QueryType enum value
         """
         query_upper = query.strip().upper()
-        
+
         if query_upper.startswith("SELECT"):
             return QueryType.SELECT
         elif query_upper.startswith("INSERT"):
@@ -67,8 +66,8 @@ class CacheInvalidator:
             return QueryType.DDL
         else:
             return QueryType.OTHER
-    
-    def extract_tables(self, query: str) -> List[str]:
+
+    def extract_tables(self, query: str) -> list[str]:
         """Extract table names from a query.
         
         Args:
@@ -79,7 +78,7 @@ class CacheInvalidator:
         """
         tables = []
         normalized = self.key_generator.normalize_query(query)
-        
+
         # Patterns for different SQL clauses
         patterns = [
             # FROM clause
@@ -95,11 +94,11 @@ class CacheInvalidator:
             # Subqueries (basic support)
             r'\(\s*select\s+.*?\s+from\s+([a-z_][a-z0-9_]*)',
         ]
-        
+
         for pattern in patterns:
             matches = re.findall(pattern, normalized, re.IGNORECASE)
             tables.extend(matches)
-        
+
         # Remove duplicates while preserving order
         seen = set()
         unique_tables = []
@@ -107,10 +106,10 @@ class CacheInvalidator:
             if table not in seen:
                 seen.add(table)
                 unique_tables.append(table)
-        
+
         return unique_tables
-    
-    def add_dependency(self, table: str, depends_on: List[str]) -> None:
+
+    def add_dependency(self, table: str, depends_on: list[str]) -> None:
         """Add table dependencies.
         
         Args:
@@ -119,11 +118,11 @@ class CacheInvalidator:
         """
         if table not in self._dependencies:
             self._dependencies[table] = []
-        
+
         for dep in depends_on:
             if dep not in self._dependencies[table]:
                 self._dependencies[table].append(dep)
-    
+
     def remove_dependency(self, table: str, dependency: str) -> None:
         """Remove a specific dependency.
         
@@ -133,8 +132,8 @@ class CacheInvalidator:
         """
         if table in self._dependencies and dependency in self._dependencies[table]:
             self._dependencies[table].remove(dependency)
-    
-    def get_dependencies(self, table: str) -> List[str]:
+
+    def get_dependencies(self, table: str) -> list[str]:
         """Get direct dependencies for a table.
         
         Args:
@@ -144,8 +143,8 @@ class CacheInvalidator:
             List of direct dependencies
         """
         return self._dependencies.get(table, [])
-    
-    def get_all_dependencies(self, table: str, visited: Optional[Set[str]] = None) -> List[str]:
+
+    def get_all_dependencies(self, table: str, visited: set[str] | None = None) -> list[str]:
         """Get all dependencies (including transitive) for a table.
         
         Args:
@@ -157,27 +156,27 @@ class CacheInvalidator:
         """
         if visited is None:
             visited = set()
-        
+
         if table in visited:
             return []
-        
+
         visited.add(table)
         all_deps = []
-        
+
         # Get direct dependencies
         direct_deps = self.get_dependencies(table)
         all_deps.extend(direct_deps)
-        
+
         # Get transitive dependencies
         for dep in direct_deps:
             transitive_deps = self.get_all_dependencies(dep, visited)
             for t_dep in transitive_deps:
                 if t_dep not in all_deps:
                     all_deps.append(t_dep)
-        
+
         return all_deps
-    
-    def generate_pattern(self, table: str, prefix: Optional[str] = None) -> str:
+
+    def generate_pattern(self, table: str, prefix: str | None = None) -> str:
         """Generate cache key pattern for a table.
         
         Args:
@@ -190,8 +189,8 @@ class CacheInvalidator:
         if prefix:
             return f"{prefix}:*:{table}:*"
         return f"*:{table}:*"
-    
-    def generate_patterns(self, tables: List[str], prefix: Optional[str] = None) -> List[str]:
+
+    def generate_patterns(self, tables: list[str], prefix: str | None = None) -> list[str]:
         """Generate cache key patterns for multiple tables.
         
         Args:
@@ -202,12 +201,12 @@ class CacheInvalidator:
             List of cache key patterns
         """
         return [self.generate_pattern(table, prefix) for table in tables]
-    
+
     async def invalidate_on_write(
         self,
         query: str,
         cache: CacheInterface,
-        database: Optional[str] = None,
+        database: str | None = None,
         targeted: bool = False
     ) -> None:
         """Invalidate cache entries based on a write operation.
@@ -219,19 +218,19 @@ class CacheInvalidator:
             targeted: Whether to use targeted invalidation
         """
         query_type = self.get_query_type(query)
-        
+
         # SELECT queries don't invalidate cache
         if query_type == QueryType.SELECT:
             return
-        
+
         # DDL operations clear entire cache
         if query_type == QueryType.DDL:
             await cache.clear()
             return
-        
+
         # Extract affected tables
         tables = self.extract_tables(query)
-        
+
         # Add dependencies based on strategy
         if self.strategy == InvalidationStrategy.AGGRESSIVE:
             # Add all dependencies
@@ -239,23 +238,23 @@ class CacheInvalidator:
             for table in tables:
                 deps = self.get_all_dependencies(table)
                 additional_tables.extend(deps)
-            
+
             # Add unique dependencies
             for dep in additional_tables:
                 if dep not in tables:
                     tables.append(dep)
-        
+
         # Generate patterns and invalidate
         patterns = self.generate_patterns(tables, database)
-        
+
         for pattern in patterns:
             await cache.delete_pattern(pattern)
-    
+
     async def invalidate_batch(
         self,
-        queries: List[str],
+        queries: list[str],
         cache: CacheInterface,
-        database: Optional[str] = None
+        database: str | None = None
     ) -> None:
         """Invalidate cache for a batch of queries.
         
@@ -267,40 +266,40 @@ class CacheInvalidator:
         # Collect all affected tables
         all_tables = set()
         has_ddl = False
-        
+
         for query in queries:
             query_type = self.get_query_type(query)
-            
+
             if query_type == QueryType.DDL:
                 has_ddl = True
                 break
-            
+
             if query_type != QueryType.SELECT:
                 tables = self.extract_tables(query)
                 all_tables.update(tables)
-        
+
         # If any DDL, clear entire cache
         if has_ddl:
             await cache.clear()
             return
-        
+
         # Invalidate all affected tables
         if all_tables:
             # Process each table separately to ensure proper pattern generation
             for table in all_tables:
                 tables_to_invalidate = [table]
-                
+
                 # Add dependencies if using aggressive strategy
                 if self.strategy == InvalidationStrategy.AGGRESSIVE:
                     deps = self.get_all_dependencies(table)
                     tables_to_invalidate.extend(deps)
-                
+
                 # Generate patterns and invalidate
                 patterns = self.generate_patterns(tables_to_invalidate, database)
                 for pattern in patterns:
                     await cache.delete_pattern(pattern)
-    
-    def analyze_where_clause(self, query: str) -> Optional[Dict[str, any]]:
+
+    def analyze_where_clause(self, query: str) -> dict[str, any] | None:
         """Analyze WHERE clause for targeted invalidation.
         
         Args:
@@ -312,15 +311,15 @@ class CacheInvalidator:
         # This is a placeholder for more sophisticated WHERE clause analysis
         # In a real implementation, this would parse the WHERE clause
         # and extract specific conditions for targeted invalidation
-        
+
         # Simple regex to find id = value patterns
         pattern = r'where\s+.*?(\w+)\s*=\s*[\'"]?(\w+)[\'"]?'
         match = re.search(pattern, query, re.IGNORECASE)
-        
+
         if match:
             return {
                 "column": match.group(1),
                 "value": match.group(2)
             }
-        
+
         return None

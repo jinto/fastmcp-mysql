@@ -3,9 +3,9 @@
 import os
 import sys
 from pathlib import Path
+from unittest.mock import patch
 
 import pytest
-from unittest.mock import patch
 
 # Add src to path for imports
 src_path = Path(__file__).parent.parent / "src"
@@ -17,14 +17,14 @@ def clean_env():
     """Fixture to provide clean environment variables."""
     # Store original environment
     original_env = os.environ.copy()
-    
+
     # Clear MySQL-related environment variables
     mysql_keys = [k for k in os.environ.keys() if k.startswith("MYSQL_")]
     for key in mysql_keys:
         del os.environ[key]
-    
+
     yield
-    
+
     # Restore original environment
     os.environ.clear()
     os.environ.update(original_env)
@@ -38,7 +38,7 @@ def basic_mysql_env():
         "MYSQL_PASS": "testpass",
         "MYSQL_DB": "testdb"
     }
-    
+
     with patch.dict(os.environ, env_vars):
         yield env_vars
 
@@ -60,6 +60,6 @@ def full_mysql_env():
         "MYSQL_CACHE_TTL": "60000",
         "MYSQL_LOG_LEVEL": "INFO"
     }
-    
+
     with patch.dict(os.environ, env_vars):
         yield env_vars

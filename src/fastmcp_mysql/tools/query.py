@@ -1,27 +1,23 @@
 """MySQL query execution tool for FastMCP."""
 
-import re
 import logging
+import re
 from enum import Enum
-from typing import Any, Dict, List, Optional, Union
+from typing import Any
 
 from fastmcp import Context
 
 from ..connection import ConnectionManager
-from ..security import SecurityManager, SecurityContext, SecuritySettings
-from ..security.config import FilterMode, RateLimitAlgorithm
-from ..security.injection import SQLInjectionDetector
-from ..security.filtering import BlacklistFilter, WhitelistFilter, CombinedFilter
-from ..security.rate_limiting import create_rate_limiter
+from ..security import SecurityContext, SecurityManager
 from ..security.exceptions import SecurityError
 
 logger = logging.getLogger(__name__)
 
 # Global connection manager instance
-_connection_manager: Optional[ConnectionManager] = None
+_connection_manager: ConnectionManager | None = None
 
 # Global security manager instance
-_security_manager: Optional[SecurityManager] = None
+_security_manager: SecurityManager | None = None
 
 
 def set_connection_manager(manager: ConnectionManager) -> None:
@@ -30,7 +26,7 @@ def set_connection_manager(manager: ConnectionManager) -> None:
     _connection_manager = manager
 
 
-def get_connection_manager() -> Optional[ConnectionManager]:
+def get_connection_manager() -> ConnectionManager | None:
     """Get the global connection manager instance."""
     return _connection_manager
 
@@ -41,7 +37,7 @@ def set_security_manager(manager: SecurityManager) -> None:
     _security_manager = manager
 
 
-def get_security_manager() -> Optional[SecurityManager]:
+def get_security_manager() -> SecurityManager | None:
     """Get the global security manager instance."""
     return _security_manager
 
@@ -60,7 +56,7 @@ class QueryType(Enum):
 
 class QueryValidator:
     """Validates SQL queries for safety and permissions."""
-    
+
     def __init__(
         self,
         allow_insert: bool = False,
@@ -77,7 +73,7 @@ class QueryValidator:
         self.allow_insert = allow_insert
         self.allow_update = allow_update
         self.allow_delete = allow_delete
-        
+
         # Patterns for detecting query types
         self.patterns = {
             QueryType.SELECT: re.compile(r'^\s*(WITH\s+.*?\s+)?SELECT\s+', re.IGNORECASE),
@@ -85,16 +81,16 @@ class QueryValidator:
             QueryType.UPDATE: re.compile(r'^\s*UPDATE\s+', re.IGNORECASE),
             QueryType.DELETE: re.compile(r'^\s*DELETE\s+', re.IGNORECASE),
             QueryType.DDL: re.compile(
-                r'^\s*(CREATE|DROP|ALTER|TRUNCATE|RENAME)\s+', 
+                r'^\s*(CREATE|DROP|ALTER|TRUNCATE|RENAME)\s+',
                 re.IGNORECASE
             ),
             QueryType.USE: re.compile(r'^\s*USE\s+', re.IGNORECASE),
             QueryType.SHOW: re.compile(r'^\s*SHOW\s+', re.IGNORECASE),
         }
-        
+
         # Pattern for detecting multiple statements
         self.multi_statement_pattern = re.compile(r';\s*\S', re.MULTILINE)
-    
+
     def get_query_type(self, query: str) -> QueryType:
         """Determine the type of SQL query.
         
@@ -105,13 +101,13 @@ class QueryValidator:
             QueryType enum value
         """
         query = query.strip()
-        
+
         for query_type, pattern in self.patterns.items():
             if pattern.match(query):
                 return query_type
-        
+
         return QueryType.OTHER
-    
+
     def validate_query(self, query: str, allow_write: bool = True) -> None:
         """Validate a SQL query.
         
@@ -125,21 +121,21 @@ class QueryValidator:
         # Check for multiple statements
         if self.multi_statement_pattern.search(query):
             raise ValueError("Multiple statements detected in query")
-        
+
         query_type = self.get_query_type(query)
-        
+
         # DDL is never allowed
         if query_type == QueryType.DDL:
             raise ValueError("DDL operations are not allowed")
-        
+
         # SELECT, USE, SHOW and OTHER queries are always allowed
         if query_type in (QueryType.SELECT, QueryType.USE, QueryType.SHOW, QueryType.OTHER):
             return
-        
+
         # Check write permissions
         if not allow_write:
             raise ValueError(f"{query_type.value} operations require write permission")
-        
+
         # Check specific write permissions
         if query_type == QueryType.INSERT and not self.allow_insert:
             raise ValueError("INSERT operations are not allowed")
@@ -151,7 +147,7 @@ class QueryValidator:
 
 class QueryExecutor:
     """Executes SQL queries with proper validation and error handling."""
-    
+
     def __init__(
         self,
         connection_manager: ConnectionManager,
@@ -165,14 +161,14 @@ class QueryExecutor:
         """
         self.connection_manager = connection_manager
         self.validator = validator
-    
+
     async def execute(
         self,
         query: str,
-        params: Optional[Union[tuple, List[Any]]] = None,
-        database: Optional[str] = None,
-        context: Optional[SecurityContext] = None
-    ) -> Dict[str, Any]:
+        params: tuple | list[Any] | None = None,
+        database: str | None = None,
+        context: SecurityContext | None = None
+    ) -> dict[str, Any]:
         """Execute a SQL query.
         
         Args:
@@ -191,25 +187,25 @@ class QueryExecutor:
                 # Convert params to tuple for security check
                 security_params = tuple(params) if params else None
                 await security_manager.validate_query(query, security_params, context)
-            
+
             # Then validate query type
             self.validator.validate_query(query)
-            
+
             # Convert params to tuple if it's a list
             if isinstance(params, list):
                 params = tuple(params)
-            
+
             # Add database prefix if specified
             if database:
                 # Simple implementation - in production, use proper SQL parser
                 query = self._add_database_prefix(query, database)
-            
+
             # Execute query
             result = await self.connection_manager.execute(query, params)
-            
+
             # Format response based on query type
             query_type = self.validator.get_query_type(query)
-            
+
             if query_type == QueryType.SELECT:
                 return {
                     "success": True,
@@ -222,7 +218,7 @@ class QueryExecutor:
                     "data": None,
                     "rows_affected": result
                 }
-        
+
         except SecurityError as e:
             # Security errors should be logged differently
             logger.warning(f"Security validation failed: {e}", extra={"query": query[:100]})
@@ -240,7 +236,7 @@ class QueryExecutor:
                 "data": None,
                 "rows_affected": None
             }
-    
+
     def _add_database_prefix(self, query: str, database: str) -> str:
         """Add database prefix to table names in query.
         
@@ -258,7 +254,7 @@ class QueryExecutor:
         return query
 
 
-def format_query_result(result: Dict[str, Any]) -> Dict[str, Any]:
+def format_query_result(result: dict[str, Any]) -> dict[str, Any]:
     """Format query result for output.
     
     Args:
@@ -272,7 +268,7 @@ def format_query_result(result: Dict[str, Any]) -> Dict[str, Any]:
             "success": True,
             "message": "Query executed successfully",
         }
-        
+
         if result["data"] is not None:
             # SELECT query result
             formatted["data"] = result["data"]
@@ -293,16 +289,16 @@ def format_query_result(result: Dict[str, Any]) -> Dict[str, Any]:
             "error": result["error"],
             "message": "Query execution failed"
         }
-    
+
     return formatted
 
 
 async def mysql_query(
     query: str,
-    params: Optional[List[Any]] = None,
-    database: Optional[str] = None,
-    context: Optional[Context] = None
-) -> Dict[str, Any]:
+    params: list[Any] | None = None,
+    database: str | None = None,
+    context: Context | None = None
+) -> dict[str, Any]:
     """Execute a MySQL query.
     
     This is the main tool function exposed to FastMCP.
@@ -325,7 +321,7 @@ async def mysql_query(
                 "error": "Connection not initialized",
                 "message": "Query execution failed"
             }
-        
+
         # Get validator from settings (in a real implementation)
         # For now, use defaults from environment
         import os
@@ -334,10 +330,10 @@ async def mysql_query(
             allow_update=os.getenv("MYSQL_ALLOW_UPDATE", "false").lower() == "true",
             allow_delete=os.getenv("MYSQL_ALLOW_DELETE", "false").lower() == "true",
         )
-        
+
         # Create executor
         executor = QueryExecutor(conn_manager, validator)
-        
+
         # Create security context from FastMCP context
         security_context = None
         if get_security_manager():
@@ -347,19 +343,19 @@ async def mysql_query(
                 user_id = context.user_id
             elif context and hasattr(context, 'session_id'):
                 user_id = context.session_id
-            
+
             security_context = SecurityContext(
                 user_id=user_id or "anonymous",
                 ip_address=getattr(context, 'ip_address', None) if context else None,
                 session_id=getattr(context, 'session_id', None) if context else None
             )
-        
+
         # Execute query
         result = await executor.execute(query, params, database, security_context)
-        
+
         # Format and return result
         return format_query_result(result)
-    
+
     except Exception as e:
         logger.error(f"Unexpected error in mysql_query: {e}")
         return {

@@ -2,12 +2,18 @@
 
 import asyncio
 import logging
+from collections.abc import AsyncIterator
 from contextlib import asynccontextmanager
-from dataclasses import dataclass, field
-from typing import Any, Dict, Optional, Type, AsyncIterator, List, Tuple
+from dataclasses import dataclass
+from typing import Any
 
 import aiomysql
-from aiomysql import DictCursor, Pool, Connection, OperationalError, SSCursor, SSDictCursor
+from aiomysql import (
+    Connection,
+    DictCursor,
+    Pool,
+    SSDictCursor,
+)
 
 from .config import Settings
 
@@ -22,9 +28,9 @@ class ConnectionPoolError(Exception):
 @dataclass
 class SSLConfig:
     """SSL configuration for MySQL connections."""
-    ca: Optional[str] = None
-    cert: Optional[str] = None
-    key: Optional[str] = None
+    ca: str | None = None
+    cert: str | None = None
+    key: str | None = None
     verify_cert: bool = True
     verify_identity: bool = True
 
@@ -36,14 +42,14 @@ class ConnectionConfig:
     port: int
     user: str
     password: str
-    database: Optional[str]
+    database: str | None
     pool_size: int = 10
     charset: str = "utf8mb4"
     connect_timeout: int = 10
     autocommit: bool = True
     echo: bool = False
-    ssl: Optional[SSLConfig] = None
-    
+    ssl: SSLConfig | None = None
+
     @classmethod
     def from_settings(cls, settings: Settings) -> "ConnectionConfig":
         """Create configuration from settings object."""
@@ -60,7 +66,7 @@ class ConnectionConfig:
 
 class ConnectionManager:
     """Manages MySQL connection pool and database operations."""
-    
+
     def __init__(self, config: ConnectionConfig):
         """Initialize connection manager.
         
@@ -68,14 +74,14 @@ class ConnectionManager:
             config: Connection configuration
         """
         self.config = config
-        self._pool: Optional[Pool] = None
+        self._pool: Pool | None = None
         self._retry_count = 3
         self._retry_delay = 1
-    
+
     async def initialize(self) -> None:
         """Initialize the connection pool with retry logic."""
         last_error = None
-        
+
         for attempt in range(self._retry_count):
             try:
                 await self._create_pool()
@@ -95,15 +101,15 @@ class ConnectionManager:
                     f"Failed to create connection pool (attempt {attempt + 1}/{self._retry_count})",
                     extra={"error": str(e)}
                 )
-                
+
                 if attempt < self._retry_count - 1:
                     delay = self._retry_delay * (2 ** attempt)  # Exponential backoff
                     await asyncio.sleep(delay)
-        
+
         raise ConnectionPoolError(
             f"Failed to create connection pool after {self._retry_count} attempts: {last_error}"
         )
-    
+
     async def _create_pool(self) -> None:
         """Create the aiomysql connection pool."""
         pool_kwargs = {
@@ -118,11 +124,11 @@ class ConnectionManager:
             "connect_timeout": self.config.connect_timeout,
             "echo": self.config.echo,
         }
-        
+
         # Only add db if specified
         if self.config.database:
             pool_kwargs["db"] = self.config.database
-        
+
         # Add SSL configuration if provided
         if self.config.ssl:
             ssl_ctx = {
@@ -136,9 +142,9 @@ class ConnectionManager:
             ssl_ctx = {k: v for k, v in ssl_ctx.items() if v is not None}
             if ssl_ctx:
                 pool_kwargs["ssl"] = ssl_ctx
-        
+
         self._pool = await aiomysql.create_pool(**pool_kwargs)
-    
+
     @asynccontextmanager
     async def get_connection(self) -> AsyncIterator[Connection]:
         """Get a connection from the pool.
@@ -151,15 +157,15 @@ class ConnectionManager:
         """
         if not self._pool:
             raise ConnectionPoolError("Connection pool not initialized")
-        
+
         async with self._pool.acquire() as conn:
             yield conn
-    
+
     async def execute(
         self,
         query: str,
-        params: Optional[tuple] = None,
-        cursor_class: Type[Any] = DictCursor
+        params: tuple | None = None,
+        cursor_class: type[Any] = DictCursor
     ) -> Any:
         """Execute a query and return results.
         
@@ -177,21 +183,21 @@ class ConnectionManager:
         async with self.get_connection() as conn:
             async with conn.cursor(cursor_class) as cursor:
                 await cursor.execute(query, params)
-                
+
                 # Check if this is a SELECT query
                 if cursor.description:
                     return await cursor.fetchall()
                 else:
                     # For INSERT/UPDATE/DELETE, return affected rows
                     return cursor.rowcount
-    
+
     async def execute_streaming(
         self,
         query: str,
-        params: Optional[tuple] = None,
+        params: tuple | None = None,
         chunk_size: int = 1000,
-        cursor_class: Type[Any] = SSDictCursor
-    ) -> AsyncIterator[List[Dict[str, Any]]]:
+        cursor_class: type[Any] = SSDictCursor
+    ) -> AsyncIterator[list[dict[str, Any]]]:
         """Execute a query and stream results in chunks.
         
         This method is memory-efficient for large result sets as it doesn't
@@ -213,26 +219,26 @@ class ConnectionManager:
             # Use server-side cursor for streaming
             async with conn.cursor(cursor_class) as cursor:
                 await cursor.execute(query, params)
-                
+
                 # Check if this is a SELECT query
                 if not cursor.description:
                     return  # No results to stream
-                
+
                 while True:
                     chunk = await cursor.fetchmany(chunk_size)
                     if not chunk:
                         break
                     yield chunk
-    
+
     async def execute_paginated(
         self,
         query: str,
-        params: Optional[tuple] = None,
+        params: tuple | None = None,
         page: int = 1,
         page_size: int = 10,
         max_page_size: int = 1000,
-        cursor_class: Type[Any] = DictCursor
-    ) -> Dict[str, Any]:
+        cursor_class: type[Any] = DictCursor
+    ) -> dict[str, Any]:
         """Execute a query with pagination support.
         
         Args:
@@ -252,35 +258,35 @@ class ConnectionManager:
         # Validate and adjust parameters
         page = max(1, page)  # Ensure page is at least 1
         page_size = min(max(1, page_size), max_page_size)  # Limit page size
-        
+
         # First, get the total count
         count_query = f"SELECT COUNT(*) as total FROM ({query}) as subquery"  # nosec B608
-        
+
         async with self.get_connection() as conn:
             async with conn.cursor(cursor_class) as cursor:
                 await cursor.execute(count_query, params)
                 count_result = await cursor.fetchone()
-                
+
                 if cursor_class == DictCursor:
                     total_count = count_result["total"]
                 else:
                     total_count = count_result[0]
-                
+
                 # Calculate pagination info
                 total_pages = (total_count + page_size - 1) // page_size if total_count > 0 else 0
-                
+
                 # Adjust page if beyond total pages
                 if page > total_pages and total_pages > 0:
                     page = total_pages
-                
+
                 # Calculate offset
                 offset = (page - 1) * page_size
-                
+
                 # Execute paginated query
                 paginated_query = f"{query} LIMIT {page_size} OFFSET {offset}"  # nosec B608
                 await cursor.execute(paginated_query, params)
                 data = await cursor.fetchall()
-        
+
         return {
             "data": data,
             "pagination": {
@@ -292,7 +298,7 @@ class ConnectionManager:
                 "has_previous": page > 1
             }
         }
-    
+
     async def health_check(self) -> bool:
         """Check if the database connection is healthy.
         
@@ -301,7 +307,7 @@ class ConnectionManager:
         """
         if not self._pool:
             return False
-        
+
         try:
             async with self.get_connection() as conn:
                 async with conn.cursor() as cursor:
@@ -311,8 +317,8 @@ class ConnectionManager:
         except Exception as e:
             logger.warning(f"Health check failed: {e}")
             return False
-    
-    def get_pool_metrics(self) -> Dict[str, int]:
+
+    def get_pool_metrics(self) -> dict[str, int]:
         """Get connection pool metrics.
         
         Returns:
@@ -326,7 +332,7 @@ class ConnectionManager:
                 "min_size": 0,
                 "max_size": 0,
             }
-        
+
         return {
             "total_connections": self._pool.size,
             "free_connections": self._pool.freesize,
@@ -334,7 +340,7 @@ class ConnectionManager:
             "min_size": self._pool.minsize,
             "max_size": self._pool.maxsize,
         }
-    
+
     async def close(self) -> None:
         """Close the connection pool."""
         if self._pool:

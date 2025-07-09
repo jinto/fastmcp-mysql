@@ -1,32 +1,27 @@
 """Observability module for FastMCP MySQL server."""
 
+from .health import ComponentHealth, HealthChecker, HealthCheckResult, HealthStatus
 from .logging import (
-    EnhancedJSONFormatter,
-    setup_enhanced_logging,
     ContextLogger,
-    RequestContext,
+    EnhancedJSONFormatter,
     MetricsLogger,
-    request_context
+    RequestContext,
+    request_context,
+    setup_enhanced_logging,
 )
 from .metrics import (
+    CacheMetrics,
+    ConnectionPoolMetrics,
+    ErrorMetrics,
     MetricsCollector,
     QueryMetrics,
-    ConnectionPoolMetrics,
-    CacheMetrics,
-    ErrorMetrics
-)
-from .health import (
-    HealthChecker,
-    HealthStatus,
-    ComponentHealth,
-    HealthCheckResult
 )
 from .tracing import (
-    TracingManager,
     SpanContext,
     SpanKind,
+    TracingManager,
+    trace_connection,
     trace_query,
-    trace_connection
 )
 
 __all__ = [

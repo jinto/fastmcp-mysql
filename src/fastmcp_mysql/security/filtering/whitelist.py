@@ -1,28 +1,28 @@
 """Whitelist-based query filter."""
 
 import re
-from typing import List, Pattern
+from re import Pattern
 
-from ..interfaces import QueryFilter
 from ..exceptions import FilteredQueryError
+from ..interfaces import QueryFilter
 
 
 class WhitelistFilter(QueryFilter):
     """Filter queries based on whitelist patterns."""
-    
-    def __init__(self, patterns: List[str]):
+
+    def __init__(self, patterns: list[str]):
         """
         Initialize whitelist filter.
         
         Args:
             patterns: List of regex patterns for allowed queries
         """
-        self.patterns: List[Pattern] = []
-        
+        self.patterns: list[Pattern] = []
+
         # Compile patterns
         for pattern in patterns:
             self.patterns.append(re.compile(pattern, re.IGNORECASE))
-    
+
     def is_allowed(self, query: str) -> bool:
         """
         Check if query matches whitelist.
@@ -37,7 +37,7 @@ class WhitelistFilter(QueryFilter):
             if pattern.match(query):
                 return True
         return False
-    
+
     def validate(self, query: str) -> None:
         """
         Validate query against whitelist.
@@ -50,5 +50,5 @@ class WhitelistFilter(QueryFilter):
         """
         if not self.is_allowed(query):
             raise FilteredQueryError(
-                f"Query not whitelisted. Query must match one of the allowed patterns."
+                "Query not whitelisted. Query must match one of the allowed patterns."
             )

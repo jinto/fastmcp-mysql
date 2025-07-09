@@ -1,17 +1,17 @@
 """Blacklist-based query filter."""
 
 import re
-from typing import List, Pattern
+from re import Pattern
 
-from ..interfaces import QueryFilter
-from ..exceptions import FilteredQueryError
 from ..config import SecuritySettings
+from ..exceptions import FilteredQueryError
+from ..interfaces import QueryFilter
 
 
 class BlacklistFilter(QueryFilter):
     """Filter queries based on blacklist patterns."""
-    
-    def __init__(self, settings: SecuritySettings = None, additional_patterns: List[str] = None):
+
+    def __init__(self, settings: SecuritySettings = None, additional_patterns: list[str] = None):
         """
         Initialize blacklist filter.
         
@@ -20,17 +20,17 @@ class BlacklistFilter(QueryFilter):
             additional_patterns: Additional patterns to blacklist
         """
         self.settings = settings or SecuritySettings()
-        self.patterns: List[Pattern] = []
-        
+        self.patterns: list[Pattern] = []
+
         # Compile default patterns
         for pattern in self.settings.blacklist_patterns:
             self.patterns.append(re.compile(pattern, re.IGNORECASE))
-        
+
         # Add additional patterns if provided
         if additional_patterns:
             for pattern in additional_patterns:
                 self.patterns.append(re.compile(pattern, re.IGNORECASE))
-    
+
     def is_allowed(self, query: str) -> bool:
         """
         Check if query passes blacklist.
@@ -45,7 +45,7 @@ class BlacklistFilter(QueryFilter):
             if pattern.search(query):
                 return False
         return True
-    
+
     def validate(self, query: str) -> None:
         """
         Validate query against blacklist.

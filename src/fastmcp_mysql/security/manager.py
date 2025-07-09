@@ -1,13 +1,16 @@
 """Security manager for coordinating all security features."""
 
 import logging
-from typing import List, Optional
 from dataclasses import dataclass
 
-from .interfaces import QueryFilter, RateLimiter, InjectionDetector
 from .config import SecuritySettings
-from .exceptions import SecurityError, InjectionError, FilterError, RateLimitError, FilteredQueryError
-
+from .exceptions import (
+    FilteredQueryError,
+    InjectionError,
+    RateLimitError,
+    SecurityError,
+)
+from .interfaces import InjectionDetector, QueryFilter, RateLimiter
 
 logger = logging.getLogger(__name__)
 
@@ -15,11 +18,11 @@ logger = logging.getLogger(__name__)
 @dataclass
 class SecurityContext:
     """Security context containing request information."""
-    user_id: Optional[str] = None
-    ip_address: Optional[str] = None
-    session_id: Optional[str] = None
-    request_id: Optional[str] = None
-    
+    user_id: str | None = None
+    ip_address: str | None = None
+    session_id: str | None = None
+    request_id: str | None = None
+
     @property
     def identifier(self) -> str:
         """Get a unique identifier for rate limiting."""
@@ -28,13 +31,13 @@ class SecurityContext:
 
 class SecurityManager:
     """Manages all security features."""
-    
+
     def __init__(
         self,
         settings: SecuritySettings,
-        query_filter: Optional[QueryFilter] = None,
-        rate_limiter: Optional[RateLimiter] = None,
-        injection_detector: Optional[InjectionDetector] = None
+        query_filter: QueryFilter | None = None,
+        rate_limiter: RateLimiter | None = None,
+        injection_detector: InjectionDetector | None = None
     ):
         """
         Initialize security manager.
@@ -50,12 +53,12 @@ class SecurityManager:
         self.rate_limiter = rate_limiter
         self.injection_detector = injection_detector
         self.logger = logger
-    
+
     async def validate_query(
         self,
         query: str,
-        params: Optional[tuple] = None,
-        context: Optional[SecurityContext] = None
+        params: tuple | None = None,
+        context: SecurityContext | None = None
     ) -> None:
         """
         Validate a query against all security rules.
@@ -69,11 +72,11 @@ class SecurityManager:
             SecurityError: If validation fails
         """
         context = context or SecurityContext()
-        
+
         # 1. Check query length
         if len(query) > self.settings.max_query_length:
             raise SecurityError(f"Query too long: {len(query)} > {self.settings.max_query_length}")
-        
+
         # 2. Rate limiting
         if self.settings.enable_rate_limiting and self.rate_limiter:
             allowed = await self.rate_limiter.check_limit(context.identifier)
@@ -81,7 +84,7 @@ class SecurityManager:
                 raise RateLimitError(
                     f"Rate limit exceeded for user: {context.identifier}"
                 )
-        
+
         # 3. SQL injection detection
         if self.settings.enable_injection_detection and self.injection_detector:
             threats = self.injection_detector.detect(query, params)
@@ -94,7 +97,7 @@ class SecurityManager:
                 raise InjectionError(
                     f"Potential SQL injection detected: {', '.join(threats)}"
                 )
-            
+
             # Also validate parameters
             if params:
                 param_threats = self.injection_detector.validate_parameters(params)
@@ -106,7 +109,7 @@ class SecurityManager:
                     raise InjectionError(
                         f"Suspicious parameters detected: {', '.join(param_threats)}"
                     )
-        
+
         # 4. Query filtering
         if self.query_filter:
             try:
@@ -119,19 +122,19 @@ class SecurityManager:
                     "user": context.identifier
                 })
                 raise
-        
+
         # 6. Audit logging
         if self.settings.audit_all_queries:
             self._log_security_event("query_executed", {
                 "query": query[:200],
                 "user": context.identifier
             })
-    
+
     def _log_security_event(self, event_type: str, details: dict) -> None:
         """Log a security event."""
         if not self.settings.log_security_events:
             return
-        
+
         logger.warning(
             f"Security event: {event_type}",
             extra={

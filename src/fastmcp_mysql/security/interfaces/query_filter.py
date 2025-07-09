@@ -1,12 +1,11 @@
 """Query filter interface for clean architecture."""
 
 from abc import ABC, abstractmethod
-from typing import Optional
 
 
 class QueryFilter(ABC):
     """Abstract base class for query filters."""
-    
+
     @abstractmethod
     def is_allowed(self, query: str) -> bool:
         """
@@ -19,7 +18,7 @@ class QueryFilter(ABC):
             True if allowed, False otherwise
         """
         pass
-    
+
     @abstractmethod
     def validate(self, query: str) -> None:
         """

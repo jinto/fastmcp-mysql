@@ -4,34 +4,29 @@ import asyncio
 import logging
 import time
 from pathlib import Path
-from typing import Any, Dict, List, Optional
+from typing import Any
 
-from fastmcp import FastMCP, Context
+from fastmcp import Context, FastMCP
 
 from .config import Settings
-from .connection import create_connection_manager, ConnectionManager
-from .tools.query import set_connection_manager, set_security_manager
-from .security import SecurityManager
-from .cache.manager import CacheManager
+from .connection import create_connection_manager
 
 # Observability imports
 from .observability import (
-    setup_enhanced_logging,
     ContextLogger,
-    MetricsLogger,
-    request_context,
-    MetricsCollector,
-    get_metrics_collector,
     HealthChecker,
-    TracingManager,
+    MetricsLogger,
+    get_metrics_collector,
+    request_context,
+    setup_enhanced_logging,
     setup_tracing,
     trace_query,
 )
-
+from .tools.query import set_connection_manager, set_security_manager
 
 # Global instances
-_health_checker: Optional[HealthChecker] = None
-_metrics_logger: Optional[MetricsLogger] = None
+_health_checker: HealthChecker | None = None
+_metrics_logger: MetricsLogger | None = None
 
 
 def setup_observability(settings: Settings) -> None:
@@ -44,7 +39,7 @@ def setup_observability(settings: Settings) -> None:
         enable_file_logging=getattr(settings, 'enable_file_logging', True),
         enable_console_logging=True
     )
-    
+
     # Set up tracing
     otlp_endpoint = getattr(settings, 'otlp_endpoint', None)
     if otlp_endpoint:
@@ -53,7 +48,7 @@ def setup_observability(settings: Settings) -> None:
             otlp_endpoint=otlp_endpoint,
             enabled=getattr(settings, 'enable_tracing', True)
         )
-    
+
     # Create metrics logger
     global _metrics_logger
     logger = logging.getLogger("fastmcp_mysql.metrics")
@@ -68,39 +63,39 @@ async def create_enhanced_server() -> FastMCP:
     """
     # Load settings
     settings = Settings()
-    
+
     # Set up observability
     setup_observability(settings)
-    
+
     # Create logger
     logger = ContextLogger(logging.getLogger(__name__))
-    
+
     # Create server
     mcp = FastMCP("MySQL Server")
-    
+
     # Initialize components
     connection_manager = await create_connection_manager(settings)
     set_connection_manager(connection_manager)
-    
+
     # Initialize cache if enabled
     cache_manager = None
     if settings.cache_enabled:
         from .cache.factory import create_cache_manager
         cache_manager = create_cache_manager(settings)
-    
+
     # Initialize security
     from .server import setup_security
     security_manager = setup_security(settings)
     if security_manager:
         set_security_manager(security_manager)
-    
+
     # Create health checker
     global _health_checker
     _health_checker = HealthChecker(connection_manager, cache_manager)
-    
+
     # Get metrics collector
     metrics_collector = get_metrics_collector()
-    
+
     # Log server startup
     logger.info(
         "FastMCP MySQL server started",
@@ -114,17 +109,17 @@ async def create_enhanced_server() -> FastMCP:
             }
         }
     )
-    
+
     # Register tools
-    
+
     @mcp.tool
     @trace_query
     async def mysql_query(
         query: str,
-        params: Optional[List[Any]] = None,
-        database: Optional[str] = None,
-        context: Optional[Context] = None
-    ) -> Dict[str, Any]:
+        params: list[Any] | None = None,
+        database: str | None = None,
+        context: Context | None = None
+    ) -> dict[str, Any]:
         """Execute a MySQL query with observability.
         
         Args:
@@ -138,30 +133,30 @@ async def create_enhanced_server() -> FastMCP:
         """
         # Create request context
         request_id = getattr(context, 'request_id', None) if context else None
-        
+
         with request_context(
             request_id=request_id,
             user_id=getattr(context, 'user_id', None) if context else None,
             session_id=getattr(context, 'session_id', None) if context else None,
         ):
             start_time = time.time()
-            
+
             try:
                 # Execute query
                 from .tools.query import mysql_query as _mysql_query
                 result = await _mysql_query(query, params, database, context)
-                
+
                 # Record metrics
                 duration_ms = (time.time() - start_time) * 1000
                 query_type = _get_query_type(query)
-                
+
                 metrics_collector.record_query(
                     query_type=query_type,
                     duration_ms=duration_ms,
                     success=result.get("success", False),
                     query=query
                 )
-                
+
                 # Log metrics
                 if _metrics_logger:
                     _metrics_logger.log_query_metrics(
@@ -171,14 +166,14 @@ async def create_enhanced_server() -> FastMCP:
                         success=result.get("success", False),
                         error=result.get("error")
                     )
-                
+
                 return result
-                
+
             except Exception as e:
                 # Record error
                 duration_ms = (time.time() - start_time) * 1000
                 metrics_collector.record_error("query_error", str(e), {"query": query[:100]})
-                
+
                 # Log error metrics
                 if _metrics_logger:
                     _metrics_logger.log_query_metrics(
@@ -188,11 +183,11 @@ async def create_enhanced_server() -> FastMCP:
                         success=False,
                         error=str(e)
                     )
-                
+
                 raise
-    
+
     @mcp.tool
-    async def mysql_health() -> Dict[str, Any]:
+    async def mysql_health() -> dict[str, Any]:
         """Get health status of MySQL server.
         
         Returns:
@@ -203,19 +198,19 @@ async def create_enhanced_server() -> FastMCP:
                 "status": "unknown",
                 "message": "Health checker not initialized"
             }
-        
+
         result = await _health_checker.check_all()
         return result.to_dict()
-    
+
     @mcp.tool
-    async def mysql_metrics() -> Dict[str, Any]:
+    async def mysql_metrics() -> dict[str, Any]:
         """Get current metrics.
         
         Returns:
             Current metrics data
         """
         return metrics_collector.export_metrics()
-    
+
     @mcp.tool
     async def mysql_metrics_prometheus() -> str:
         """Get metrics in Prometheus format.
@@ -224,9 +219,9 @@ async def create_enhanced_server() -> FastMCP:
             Metrics in Prometheus text format
         """
         return metrics_collector.export_prometheus()
-    
+
     # Background tasks
-    
+
     async def update_connection_metrics():
         """Periodically update connection pool metrics."""
         while True:
@@ -237,24 +232,24 @@ async def create_enhanced_server() -> FastMCP:
                     active=pool_metrics["used_connections"],
                     max_size=pool_metrics["max_size"]
                 )
-                
+
                 if _metrics_logger:
                     _metrics_logger.log_connection_metrics(
                         total=pool_metrics["total_connections"],
                         free=pool_metrics["free_connections"],
                         used=pool_metrics["used_connections"]
                     )
-                
+
                 await asyncio.sleep(30)  # Update every 30 seconds
             except Exception as e:
                 logger.error(f"Failed to update connection metrics: {e}")
                 await asyncio.sleep(60)  # Wait longer on error
-    
+
     async def update_cache_metrics():
         """Periodically update cache metrics."""
         if not cache_manager:
             return
-            
+
         while True:
             try:
                 # Update cache size
@@ -263,7 +258,7 @@ async def create_enhanced_server() -> FastMCP:
                     current=cache_manager.size(),
                     max_size=cache_manager.max_size
                 )
-                
+
                 if _metrics_logger:
                     _metrics_logger.log_cache_metrics(
                         hits=metrics.hits,
@@ -271,17 +266,17 @@ async def create_enhanced_server() -> FastMCP:
                         evictions=metrics.evictions,
                         size=metrics.current_size
                     )
-                
+
                 await asyncio.sleep(60)  # Update every minute
             except Exception as e:
                 logger.error(f"Failed to update cache metrics: {e}")
                 await asyncio.sleep(120)  # Wait longer on error
-    
+
     # Start background tasks
     asyncio.create_task(update_connection_metrics())
     if cache_manager:
         asyncio.create_task(update_cache_metrics())
-    
+
     return mcp
 
 
