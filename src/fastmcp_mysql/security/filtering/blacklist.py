@@ -12,7 +12,7 @@ class BlacklistFilter(QueryFilter):
     """Filter queries based on blacklist patterns."""
 
     def __init__(
-        self, settings: SecuritySettings = None, additional_patterns: list[str] = None
+        self, settings: SecuritySettings | None = None, additional_patterns: list[str] | None = None
     ):
         """
         Initialize blacklist filter.

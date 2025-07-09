@@ -309,7 +309,7 @@ class CacheInvalidator:
                 for pattern in patterns:
                     await cache.delete_pattern(pattern)
 
-    def analyze_where_clause(self, query: str) -> dict[str, any] | None:
+    def analyze_where_clause(self, query: str) -> dict[str, Any] | None:
         """Analyze WHERE clause for targeted invalidation.
 
         Args:

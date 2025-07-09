@@ -116,6 +116,7 @@ warn_redundant_casts = true
 warn_unused_ignores = true
 warn_no_return = true
 strict_optional = true
+ignore_missing_imports = true
 
 [dependency-groups]
 dev = [

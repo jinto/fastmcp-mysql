@@ -322,7 +322,7 @@ class ConnectionManager:
                 async with conn.cursor() as cursor:
                     await cursor.execute("SELECT 1")
                     result = await cursor.fetchone()
-                    return result == (1,)
+                    return bool(result == (1,))
         except Exception as e:
             logger.warning(f"Health check failed: {e}")
             return False

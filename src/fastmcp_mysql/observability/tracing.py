@@ -48,7 +48,7 @@ class SpanContext:
     status: str = "ok"
     kind: SpanKind = SpanKind.INTERNAL
 
-    def add_event(self, name: str, attributes: dict[str, Any] | None = None):
+    def add_event(self, name: str, attributes: dict[str, Any] | None = None) -> None:
         """Add an event to the span."""
         self.events.append(
             {
@@ -58,17 +58,17 @@ class SpanContext:
             }
         )
 
-    def set_attribute(self, key: str, value: Any):
+    def set_attribute(self, key: str, value: Any) -> None:
         """Set a span attribute."""
         self.attributes[key] = value
 
-    def set_status(self, status: str, message: str | None = None):
+    def set_status(self, status: str, message: str | None = None) -> None:
         """Set span status."""
         self.status = status
         if message:
             self.attributes["status_message"] = message
 
-    def end(self):
+    def end(self) -> None:
         """End the span."""
         self.end_time = time.time()
 
@@ -126,7 +126,7 @@ class TracingManager:
         if self.enabled and otlp_endpoint:
             self._setup_opentelemetry(otlp_endpoint)
 
-    def _setup_opentelemetry(self, otlp_endpoint: str):
+    def _setup_opentelemetry(self, otlp_endpoint: str) -> None:
         """Set up OpenTelemetry tracing."""
         if not OPENTELEMETRY_AVAILABLE:
             return
@@ -232,7 +232,7 @@ class TracingManager:
     def export_traces(self) -> dict[str, Any]:
         """Export trace data."""
         # Group spans by trace ID
-        traces = {}
+        traces: dict[str, list[dict[str, Any]]] = {}
         for span in self._spans:
             trace_id = span.trace_id
             if trace_id not in traces:
@@ -249,10 +249,10 @@ class TracingManager:
 # Decorators for common tracing scenarios
 
 
-def trace_query(func):
+def trace_query(func: Any) -> Any:
     """Decorator to trace query execution."""
 
-    async def wrapper(*args, **kwargs):
+    async def wrapper(*args: Any, **kwargs: Any) -> Any:
         manager = get_tracing_manager()
         if not manager:
             return await func(*args, **kwargs)
@@ -283,10 +283,10 @@ def trace_query(func):
     return wrapper
 
 
-def trace_connection(func):
+def trace_connection(func: Any) -> Any:
     """Decorator to trace connection operations."""
 
-    async def wrapper(*args, **kwargs):
+    async def wrapper(*args: Any, **kwargs: Any) -> Any:
         manager = get_tracing_manager()
         if not manager:
             return await func(*args, **kwargs)

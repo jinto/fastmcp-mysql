@@ -268,4 +268,4 @@ class CacheInterface(ABC):
 
         new_value = value + delta
         await self.set(key, new_value)
-        return new_value
+        return int(new_value)

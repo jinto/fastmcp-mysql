@@ -46,7 +46,7 @@ def setup_logging() -> None:
     """Configure structured logging."""
     # Get log level from environment
     try:
-        settings = Settings(_env_file=None)
+        settings = Settings()
         log_level = settings.log_level
     except Exception:
         # Default to INFO if settings can't be loaded
@@ -194,7 +194,7 @@ def create_server() -> FastMCP:
     settings = Settings()
 
     # Create server
-    mcp = FastMCP("MySQL Server")
+    mcp: FastMCP = FastMCP("MySQL Server")
 
     # Store settings in server for later use
     mcp._settings = settings  # type: ignore
@@ -220,7 +220,7 @@ def create_server() -> FastMCP:
     # Initialize connection on first use
     _connection_initialized = False
 
-    async def ensure_connection():
+    async def ensure_connection() -> None:
         """Ensure database connection is initialized."""
         nonlocal _connection_initialized
         if not _connection_initialized:

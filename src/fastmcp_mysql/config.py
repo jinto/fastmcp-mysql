@@ -160,7 +160,7 @@ class Settings(BaseSettings):
             v = v.upper()
             if v not in [level.value for level in LogLevel]:
                 raise ValueError(f"Invalid log level: {v}")
-        return v
+        return str(v)
 
     @property
     def connection_string_safe(self) -> str:
