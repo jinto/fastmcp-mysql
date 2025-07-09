@@ -29,7 +29,6 @@ jobs:
       - name: Install dependencies
         run: |
           uv pip install --system -e ".[dev]"
-          uv pip install --system pip-audit safety
       
       - name: Check for outdated dependencies
         run: |
@@ -48,7 +47,7 @@ jobs:
           echo "" >> outdated-report.md
           echo "### Security Vulnerabilities" >> outdated-report.md
           echo '```' >> outdated-report.md
-          pip-audit --desc >> outdated-report.md || true
+          uvx pip-audit --desc >> outdated-report.md || true
           echo '```' >> outdated-report.md
       
       - name: Create or update issue
@@ -211,9 +210,7 @@ EOF
         with:
           python-version: "3.11"
       
-      - name: Install analysis tools
-        run: |
-          uv pip install --system radon xenon flake8 flake8-cognitive-complexity
+      # Analysis tools will be run directly with uvx
       
       - name: Analyze code complexity
         run: |
@@ -224,25 +221,25 @@ EOF
           
           echo "### Cyclomatic Complexity" >> metrics-report.md
           echo '```' >> metrics-report.md
-          radon cc src -s -a >> metrics-report.md
+          uvx radon cc src -s -a >> metrics-report.md
           echo '```' >> metrics-report.md
           
           echo "" >> metrics-report.md
           echo "### Maintainability Index" >> metrics-report.md
           echo '```' >> metrics-report.md
-          radon mi src -s >> metrics-report.md
+          uvx radon mi src -s >> metrics-report.md
           echo '```' >> metrics-report.md
           
           echo "" >> metrics-report.md
           echo "### Raw Metrics" >> metrics-report.md
           echo '```' >> metrics-report.md
-          radon raw src -s >> metrics-report.md
+          uvx radon raw src -s >> metrics-report.md
           echo '```' >> metrics-report.md
       
       - name: Check complexity thresholds
         run: |
           # Fail if cyclomatic complexity > 10
-          xenon --max-absolute B --max-modules B --max-average A src
+          uvx xenon --max-absolute B --max-modules B --max-average A src
       
       - name: Upload metrics report
         uses: actions/upload-artifact@v4
@@ -269,7 +266,6 @@ EOF
       - name: Install dependencies
         run: |
           uv pip install --system -e ".[dev]"
-          uv pip install --system interrogate pydocstyle
       
       - name: Check docstring coverage
         run: |
@@ -280,13 +276,13 @@ EOF
           
           echo "### Docstring Coverage" >> doc-report.md
           echo '```' >> doc-report.md
-          interrogate -v src >> doc-report.md
+          uvx interrogate -v src >> doc-report.md
           echo '```' >> doc-report.md
           
           echo "" >> doc-report.md
           echo "### Docstring Style Issues" >> doc-report.md
           echo '```' >> doc-report.md
-          pydocstyle src --count >> doc-report.md || true
+          uvx pydocstyle src --count >> doc-report.md || true
           echo '```' >> doc-report.md
       
       - name: Upload documentation report
