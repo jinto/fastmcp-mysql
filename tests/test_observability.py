@@ -4,9 +4,10 @@ import asyncio
 import json
 import logging
 import tempfile
+import threading
 import time
 from pathlib import Path
-from unittest.mock import Mock, patch
+from unittest.mock import Mock, patch, AsyncMock
 
 import pytest
 
@@ -64,14 +65,8 @@ class TestEnhancedJSONFormatter:
         """Test formatting with request context."""
         formatter = EnhancedJSONFormatter()
         
-        # Set context
-        context = RequestContext(
-            request_id="req123",
-            user_id="user456",
-            session_id="session789"
-        )
-        
-        with patch.object(threading.current_thread(), 'request_context', context):
+        # Use the request_context manager
+        with request_context(request_id="req123", user_id="user456", session_id="session789"):
             record = logging.LogRecord(
                 name="test",
                 level=logging.INFO,
@@ -206,9 +201,12 @@ class TestQueryMetrics:
         
         percentiles = metrics.get_percentiles()
         
-        assert percentiles["p50"] == 50.0  # Median
-        assert percentiles["p90"] == 90.0
-        assert percentiles["p99"] == 100.0  # Last value for small dataset
+        # With 10 items, p50 = sorted_durations[int(10 * 0.5)] = sorted_durations[5] = 60
+        assert percentiles["p50"] == 60.0
+        # p90 = sorted_durations[int(10 * 0.9)] = sorted_durations[9] = 100
+        assert percentiles["p90"] == 100.0
+        # p99 = sorted_durations[int(10 * 0.99)] = sorted_durations[9] = 100
+        assert percentiles["p99"] == 100.0
     
     def test_error_rate(self):
         """Test error rate calculation."""
@@ -382,7 +380,7 @@ class TestHealthChecker:
         """Test database health check."""
         # Mock connection manager
         mock_conn_manager = Mock()
-        mock_conn_manager.health_check.return_value = True
+        mock_conn_manager.health_check = AsyncMock(return_value=True)
         mock_conn_manager.get_pool_metrics.return_value = {
             "used_connections": 5,
             "max_size": 20,
@@ -403,7 +401,7 @@ class TestHealthChecker:
         """Test degraded database status."""
         # Mock high utilization
         mock_conn_manager = Mock()
-        mock_conn_manager.health_check.return_value = True
+        mock_conn_manager.health_check = AsyncMock(return_value=True)
         mock_conn_manager.get_pool_metrics.return_value = {
             "used_connections": 19,
             "max_size": 20,
@@ -423,7 +421,7 @@ class TestHealthChecker:
         """Test overall health check."""
         # Mock healthy connection
         mock_conn_manager = Mock()
-        mock_conn_manager.health_check.return_value = True
+        mock_conn_manager.health_check = AsyncMock(return_value=True)
         mock_conn_manager.get_pool_metrics.return_value = {
             "used_connections": 5,
             "max_size": 20,

@@ -24,6 +24,7 @@ from .health import (
 from .tracing import (
     TracingManager,
     SpanContext,
+    SpanKind,
     trace_query,
     trace_connection
 )
@@ -50,6 +51,7 @@ __all__ = [
     # Tracing
     "TracingManager",
     "SpanContext",
+    "SpanKind",
     "trace_query",
     "trace_connection",
 ]
