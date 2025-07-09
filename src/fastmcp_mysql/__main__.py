@@ -1,6 +1,5 @@
 """Entry point for uvx execution."""
 
-import asyncio
 import logging
 import sys
 from typing import Optional

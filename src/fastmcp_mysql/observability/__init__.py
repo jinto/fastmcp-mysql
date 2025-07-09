@@ -5,7 +5,8 @@ from .logging import (
     setup_enhanced_logging,
     ContextLogger,
     RequestContext,
-    MetricsLogger
+    MetricsLogger,
+    request_context
 )
 from .metrics import (
     MetricsCollector,
@@ -34,6 +35,7 @@ __all__ = [
     "ContextLogger",
     "RequestContext",
     "MetricsLogger",
+    "request_context",
     # Metrics
     "MetricsCollector",
     "QueryMetrics",
