@@ -5,28 +5,31 @@ All notable changes to FastMCP MySQL Server will be documented in this file.
 The format is based on [Keep a Changelog](https://keepachangelog.com/en/1.0.0/),
 and this project adheres to [Semantic Versioning](https://semver.org/spec/v2.0.0.html).
 
+## [0.1.2] - 2025-07-09
+
+### Added
+
+### Fixed
+- pass pytest
+- partial mypy type annotations
+- partial mypy type annotations
+- update ruff config to ignore problematic rules
+- apply ruff auto-fixes and format code
+- add missing SpanKind export and fix observability tests
+- resolve remaining CI/CD issues
+- resolve CI/CD issues
+- upgrade to actions/upload-artifact@v4 and download-artifact@v4
+- GitHub Actions workflows to use uvx instead of uv pip install
+
+### Changed
+
+
 ## [Unreleased]
 
 ### Added
 - Comprehensive API documentation
 - Additional example scripts for common use cases
 - Performance optimization guide
-
-## [0.1.2] - 2025-01-09
-
-### Fixed
-- Fixed SpanKind import in observability module
-- Fixed AsyncMock usage in tests for Python 3.13
-- Applied comprehensive code formatting with ruff
-- Fixed deprecated type hints (Optional[X] to X | None)
-- Fixed import ordering and removed unused imports
-- Fixed trailing whitespace and missing newlines
-- Fixed CI/CD pipeline issues with uv/uvx commands
-
-### Changed
-- Upgraded GitHub Actions: artifact actions v3→v4, CodeQL v2→v3
-- Modernized type hints throughout the codebase
-- Improved code consistency and formatting
 
 ## [0.1.1] - 2025-01-09
 
