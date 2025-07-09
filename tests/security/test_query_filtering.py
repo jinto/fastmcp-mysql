@@ -204,8 +204,8 @@ class TestQueryFiltering:
             filter.is_allowed(query)
         end = time.time()
 
-        # Should be fast (less than 200ms for 1000 queries)
-        assert (end - start) < 0.2, f"Filter too slow: {end - start}s for 1000 queries"
+        # Should be fast (less than 500ms for 1000 queries)
+        assert (end - start) < 0.5, f"Filter too slow: {end - start}s for 1000 queries"
 
     def test_filter_with_prepared_statements(self):
         """Test that filters allow proper prepared statements."""

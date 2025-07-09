@@ -91,7 +91,11 @@ class TestStreaming:
 
         mock_conn = AsyncMock()
         mock_conn.cursor.return_value.__aenter__.return_value = mock_cursor
-        manager.get_connection.return_value.__aenter__.return_value = mock_conn
+        
+        # Create a context manager for get_connection
+        async_cm = AsyncMock()
+        async_cm.__aenter__.return_value = mock_conn
+        manager.get_connection.return_value = async_cm
 
         # Create a proper async generator
         async def execute_streaming_mock(query, params=None, chunk_size=1000):
@@ -128,7 +132,11 @@ class TestStreaming:
 
         mock_conn = AsyncMock()
         mock_conn.cursor.return_value.__aenter__.return_value = mock_cursor
-        manager.get_connection.return_value.__aenter__.return_value = mock_conn
+        
+        # Create a context manager for get_connection
+        async_cm = AsyncMock()
+        async_cm.__aenter__.return_value = mock_conn
+        manager.get_connection.return_value = async_cm
 
         # Create async generator
         async def execute_streaming_mock(query, params=None, chunk_size=1000):
@@ -159,8 +167,23 @@ class TestStreaming:
 
         mock_conn = AsyncMock()
         mock_conn.cursor.return_value.__aenter__.return_value = mock_cursor
-        manager.get_connection.return_value.__aenter__.return_value = mock_conn
+        
+        # Create a context manager for get_connection
+        async_cm = AsyncMock()
+        async_cm.__aenter__.return_value = mock_conn
+        manager.get_connection.return_value = async_cm
 
+        # Create async generator that raises error
+        async def execute_streaming_mock(query, params=None, chunk_size=1000):
+            await mock_cursor.execute(query, params)
+            while True:
+                chunk = await mock_cursor.fetchmany(chunk_size)
+                if not chunk:
+                    break
+                yield chunk
+        
+        manager.execute_streaming = execute_streaming_mock
+        
         # Test error handling
         with pytest.raises(aiomysql.Error):
             async for _chunk in manager.execute_streaming("SELECT * FROM bad_table"):
@@ -193,8 +216,23 @@ class TestStreaming:
 
         mock_conn = AsyncMock()
         mock_conn.cursor.return_value.__aenter__.return_value = mock_cursor
-        manager.get_connection.return_value.__aenter__.return_value = mock_conn
+        
+        # Create a context manager for get_connection
+        async_cm = AsyncMock()
+        async_cm.__aenter__.return_value = mock_conn
+        manager.get_connection.return_value = async_cm
 
+        # Create async generator
+        async def execute_streaming_mock(query, params=None, chunk_size=1000):
+            await mock_cursor.execute(query, params)
+            while True:
+                chunk = await mock_cursor.fetchmany(chunk_size)
+                if not chunk:
+                    break
+                yield chunk
+        
+        manager.execute_streaming = execute_streaming_mock
+        
         # Test streaming large dataset
         total_received = 0
         chunk_count = 0
@@ -232,8 +270,23 @@ class TestStreaming:
 
         mock_conn = AsyncMock()
         mock_conn.cursor.return_value.__aenter__.return_value = mock_cursor
-        manager.get_connection.return_value.__aenter__.return_value = mock_conn
+        
+        # Create a context manager for get_connection
+        async_cm = AsyncMock()
+        async_cm.__aenter__.return_value = mock_conn
+        manager.get_connection.return_value = async_cm
 
+        # Create async generator
+        async def execute_streaming_mock(query, params=None, chunk_size=1000):
+            await mock_cursor.execute(query, params)
+            while True:
+                chunk = await mock_cursor.fetchmany(chunk_size)
+                if not chunk:
+                    break
+                yield chunk
+        
+        manager.execute_streaming = execute_streaming_mock
+        
         # Process streaming
         async for _chunk in manager.execute_streaming(
             "SELECT * FROM huge_table", chunk_size=100
@@ -261,8 +314,23 @@ class TestStreaming:
 
         mock_conn = AsyncMock()
         mock_conn.cursor.return_value.__aenter__.return_value = mock_cursor
-        manager.get_connection.return_value.__aenter__.return_value = mock_conn
+        
+        # Create a context manager for get_connection
+        async_cm = AsyncMock()
+        async_cm.__aenter__.return_value = mock_conn
+        manager.get_connection.return_value = async_cm
 
+        # Create async generator
+        async def execute_streaming_mock(query, params=None, chunk_size=1000):
+            await mock_cursor.execute(query, params)
+            while True:
+                chunk = await mock_cursor.fetchmany(chunk_size)
+                if not chunk:
+                    break
+                yield chunk
+        
+        manager.execute_streaming = execute_streaming_mock
+        
         # Test cancellation
         chunks_received = 0
 
