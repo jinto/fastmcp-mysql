@@ -1,4 +1,5 @@
 """Unit tests for monitoring system."""
+
 import json
 from datetime import datetime, timedelta
 from unittest.mock import Mock, patch
@@ -229,11 +230,13 @@ class TestErrorMetrics:
         # Record errors over time
         base_time = datetime.now() - timedelta(minutes=30)
         for i in range(10):
-            metrics.error_timeline.append({
-                "timestamp": base_time + timedelta(minutes=i),
-                "type": "TestError",
-                "message": f"Error {i}"
-            })
+            metrics.error_timeline.append(
+                {
+                    "timestamp": base_time + timedelta(minutes=i),
+                    "type": "TestError",
+                    "message": f"Error {i}",
+                }
+            )
 
         # Should have 10 errors in last hour
         rate = metrics.get_error_rate()
@@ -269,10 +272,9 @@ class TestHealthChecker:
     async def test_database_health_check(self):
         """Test database health check."""
         checker = HealthChecker()
-        metrics = Mock(get_stats=Mock(return_value={
-            "active_connections": 5,
-            "utilization": 0.5
-        }))
+        metrics = Mock(
+            get_stats=Mock(return_value={"active_connections": 5, "utilization": 0.5})
+        )
 
         status = await checker.check_database(metrics)
         assert status["status"] == HealthStatus.HEALTHY
@@ -282,10 +284,11 @@ class TestHealthChecker:
     async def test_query_performance_check(self):
         """Test query performance health check."""
         checker = HealthChecker()
-        metrics = Mock(get_stats=Mock(return_value={
-            "success_rate": 0.95,
-            "percentiles": {"p95": 0.5}
-        }))
+        metrics = Mock(
+            get_stats=Mock(
+                return_value={"success_rate": 0.95, "percentiles": {"p95": 0.5}}
+            )
+        )
 
         status = await checker.check_query_performance(metrics)
         assert status["status"] == HealthStatus.HEALTHY
@@ -294,10 +297,7 @@ class TestHealthChecker:
     async def test_cache_health_check(self):
         """Test cache health check."""
         checker = HealthChecker()
-        metrics = Mock(get_stats=Mock(return_value={
-            "hit_rate": 0.8,
-            "size": 500
-        }))
+        metrics = Mock(get_stats=Mock(return_value={"hit_rate": 0.8, "size": 500}))
 
         status = await checker.check_cache(metrics)
         assert status["status"] == HealthStatus.HEALTHY
@@ -308,10 +308,14 @@ class TestHealthChecker:
         checker = HealthChecker()
 
         # Mock high error rate
-        error_metrics = Mock(get_stats=Mock(return_value={
-            "error_rate_per_hour": 150,  # Above warning threshold
-            "total_errors": 150
-        }))
+        error_metrics = Mock(
+            get_stats=Mock(
+                return_value={
+                    "error_rate_per_hour": 150,  # Above warning threshold
+                    "total_errors": 150,
+                }
+            )
+        )
 
         status = await checker.check_errors(error_metrics)
         assert status["status"] == HealthStatus.DEGRADED
@@ -322,10 +326,14 @@ class TestHealthChecker:
         checker = HealthChecker()
 
         # Mock very high error rate
-        error_metrics = Mock(get_stats=Mock(return_value={
-            "error_rate_per_hour": 600,  # Above critical threshold
-            "total_errors": 600
-        }))
+        error_metrics = Mock(
+            get_stats=Mock(
+                return_value={
+                    "error_rate_per_hour": 600,  # Above critical threshold
+                    "total_errors": 600,
+                }
+            )
+        )
 
         status = await checker.check_errors(error_metrics)
         assert status["status"] == HealthStatus.UNHEALTHY
@@ -336,10 +344,7 @@ class TestHealthChecker:
         checker = HealthChecker()
 
         async def custom_check():
-            return {
-                "status": HealthStatus.HEALTHY,
-                "details": {"custom": "OK"}
-            }
+            return {"status": HealthStatus.HEALTHY, "details": {"custom": "OK"}}
 
         checker.register_check("custom", custom_check)
 
@@ -399,6 +404,7 @@ class TestEnhancedJSONFormatter:
 
         # Create a real LogRecord
         import logging
+
         record = logging.LogRecord(
             name="test_logger",
             level=logging.INFO,
@@ -407,7 +413,7 @@ class TestEnhancedJSONFormatter:
             msg="Test message",
             args=(),
             exc_info=None,
-            func="test_func"
+            func="test_func",
         )
 
         # Format the record
@@ -429,24 +435,18 @@ class TestLogRotator:
     def test_log_rotator_creation(self):
         """Test creating log rotator."""
         rotator = LogRotator(
-            filename="test.log",
-            max_bytes=1024*1024,  # 1MB
-            backup_count=3
+            filename="test.log", max_bytes=1024 * 1024, backup_count=3  # 1MB
         )
 
         assert rotator.filename == "test.log"
-        assert rotator.max_bytes == 1024*1024
+        assert rotator.max_bytes == 1024 * 1024
         assert rotator.backup_count == 3
 
-    @patch('os.path.getsize')
-    @patch('os.rename')
+    @patch("os.path.getsize")
+    @patch("os.rename")
     def test_should_rotate(self, mock_rename, mock_getsize):
         """Test rotation logic."""
-        rotator = LogRotator(
-            filename="test.log",
-            max_bytes=1000,
-            backup_count=3
-        )
+        rotator = LogRotator(filename="test.log", max_bytes=1000, backup_count=3)
 
         # File exceeds max size
         mock_getsize.return_value = 1500

@@ -1,6 +1,5 @@
 """Tests for query filtering functionality."""
 
-
 import pytest
 
 from fastmcp_mysql.security.exceptions import FilteredQueryError
@@ -14,8 +13,8 @@ class TestQueryFiltering:
         """Test that QueryFilter interface is properly defined."""
 
         # Interface should require these methods
-        assert hasattr(QueryFilter, 'validate')
-        assert hasattr(QueryFilter, 'is_allowed')
+        assert hasattr(QueryFilter, "validate")
+        assert hasattr(QueryFilter, "is_allowed")
 
     @pytest.mark.asyncio
     async def test_blacklist_filter_blocks_dangerous_queries(self, dangerous_queries):
@@ -91,7 +90,9 @@ class TestQueryFiltering:
         ]
 
         for query in blocked_queries:
-            assert not filter.is_allowed(query), f"Non-whitelisted query allowed: {query}"
+            assert not filter.is_allowed(
+                query
+            ), f"Non-whitelisted query allowed: {query}"
 
             with pytest.raises(FilteredQueryError) as exc:
                 filter.validate(query)
@@ -107,10 +108,12 @@ class TestQueryFiltering:
 
         # Create individual filters
         blacklist = BlacklistFilter()
-        whitelist = WhitelistFilter(patterns=[
-            r"^SELECT .+ FROM products WHERE .+$",
-            r"^INSERT INTO orders .+$",
-        ])
+        whitelist = WhitelistFilter(
+            patterns=[
+                r"^SELECT .+ FROM products WHERE .+$",
+                r"^INSERT INTO orders .+$",
+            ]
+        )
 
         # Combined filter (must pass both)
         filter = CombinedFilter(filters=[blacklist, whitelist])

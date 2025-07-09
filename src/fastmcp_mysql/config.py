@@ -28,114 +28,70 @@ class Settings(BaseSettings):
     db: str | None = Field(default=None, description="MySQL database name (optional)")
 
     # Security settings
-    allow_insert: bool = Field(
-        default=False,
-        description="Allow INSERT operations"
-    )
-    allow_update: bool = Field(
-        default=False,
-        description="Allow UPDATE operations"
-    )
-    allow_delete: bool = Field(
-        default=False,
-        description="Allow DELETE operations"
-    )
+    allow_insert: bool = Field(default=False, description="Allow INSERT operations")
+    allow_update: bool = Field(default=False, description="Allow UPDATE operations")
+    allow_delete: bool = Field(default=False, description="Allow DELETE operations")
 
     # Performance settings
-    pool_size: int = Field(
-        default=10,
-        description="Connection pool size"
-    )
+    pool_size: int = Field(default=10, description="Connection pool size")
     query_timeout: int = Field(
-        default=30000,
-        description="Query timeout in milliseconds"
+        default=30000, description="Query timeout in milliseconds"
     )
-    cache_ttl: int = Field(
-        default=60000,
-        description="Cache TTL in milliseconds"
-    )
+    cache_ttl: int = Field(default=60000, description="Cache TTL in milliseconds")
 
     # Cache settings
-    cache_enabled: bool = Field(
-        default=True,
-        description="Enable query result caching"
-    )
+    cache_enabled: bool = Field(default=True, description="Enable query result caching")
     cache_max_size: int = Field(
-        default=1000,
-        description="Maximum number of cache entries"
+        default=1000, description="Maximum number of cache entries"
     )
     cache_eviction_policy: str = Field(
-        default="lru",
-        description="Cache eviction policy (lru, ttl)"
+        default="lru", description="Cache eviction policy (lru, ttl)"
     )
     cache_cleanup_interval: float = Field(
-        default=60.0,
-        description="Cache cleanup interval in seconds"
+        default=60.0, description="Cache cleanup interval in seconds"
     )
     cache_invalidation_mode: str = Field(
         default="aggressive",
-        description="Cache invalidation strategy (aggressive, conservative, targeted)"
+        description="Cache invalidation strategy (aggressive, conservative, targeted)",
     )
 
     # Performance settings
     streaming_chunk_size: int = Field(
-        default=1000,
-        description="Default chunk size for streaming queries"
+        default=1000, description="Default chunk size for streaming queries"
     )
     pagination_default_size: int = Field(
-        default=10,
-        description="Default page size for paginated queries"
+        default=10, description="Default page size for paginated queries"
     )
     pagination_max_size: int = Field(
-        default=1000,
-        description="Maximum allowed page size"
+        default=1000, description="Maximum allowed page size"
     )
 
     # Logging settings
-    log_level: LogLevel = Field(
-        default=LogLevel.INFO,
-        description="Logging level"
-    )
-    log_dir: str | None = Field(
-        default=None,
-        description="Directory for log files"
-    )
+    log_level: LogLevel = Field(default=LogLevel.INFO, description="Logging level")
+    log_dir: str | None = Field(default=None, description="Directory for log files")
     enable_file_logging: bool = Field(
-        default=False,
-        description="Enable file logging with rotation"
+        default=False, description="Enable file logging with rotation"
     )
 
     # Observability settings
-    enable_metrics: bool = Field(
-        default=True,
-        description="Enable metrics collection"
-    )
+    enable_metrics: bool = Field(default=True, description="Enable metrics collection")
     enable_health_checks: bool = Field(
-        default=True,
-        description="Enable health check endpoints"
+        default=True, description="Enable health check endpoints"
     )
     enable_tracing: bool = Field(
-        default=False,
-        description="Enable distributed tracing"
+        default=False, description="Enable distributed tracing"
     )
     otlp_endpoint: str | None = Field(
-        default=None,
-        description="OpenTelemetry collector endpoint"
+        default=None, description="OpenTelemetry collector endpoint"
     )
     slow_query_threshold_ms: int = Field(
-        default=1000,
-        description="Threshold for slow query logging in milliseconds"
+        default=1000, description="Threshold for slow query logging in milliseconds"
     )
     metrics_export_interval: int = Field(
-        default=60,
-        description="Metrics export interval in seconds"
+        default=60, description="Metrics export interval in seconds"
     )
 
-    model_config = {
-        "env_prefix": "MYSQL_",
-        "case_sensitive": False,
-        "extra": "ignore"
-    }
+    model_config = {"env_prefix": "MYSQL_", "case_sensitive": False, "extra": "ignore"}
 
     @field_validator("port")
     @classmethod
@@ -161,7 +117,12 @@ class Settings(BaseSettings):
             raise ValueError("Timeout values must be non-negative")
         return v
 
-    @field_validator("cache_max_size", "streaming_chunk_size", "pagination_default_size", "pagination_max_size")
+    @field_validator(
+        "cache_max_size",
+        "streaming_chunk_size",
+        "pagination_default_size",
+        "pagination_max_size",
+    )
     @classmethod
     def validate_positive_integers(cls, v: int) -> int:
         """Validate positive integer values."""
@@ -175,7 +136,9 @@ class Settings(BaseSettings):
         """Validate cache eviction policy."""
         valid_policies = ["lru", "ttl", "fifo"]
         if v.lower() not in valid_policies:
-            raise ValueError(f"Invalid eviction policy. Must be one of: {', '.join(valid_policies)}")
+            raise ValueError(
+                f"Invalid eviction policy. Must be one of: {', '.join(valid_policies)}"
+            )
         return v.lower()
 
     @field_validator("cache_invalidation_mode")
@@ -184,7 +147,9 @@ class Settings(BaseSettings):
         """Validate cache invalidation mode."""
         valid_modes = ["aggressive", "conservative", "targeted"]
         if v.lower() not in valid_modes:
-            raise ValueError(f"Invalid invalidation mode. Must be one of: {', '.join(valid_modes)}")
+            raise ValueError(
+                f"Invalid invalidation mode. Must be one of: {', '.join(valid_modes)}"
+            )
         return v.lower()
 
     @field_validator("log_level", mode="before")

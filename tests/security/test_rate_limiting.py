@@ -16,8 +16,8 @@ class TestRateLimiting:
         """Test that RateLimiter interface is properly defined."""
 
         # Interface should require these methods
-        assert hasattr(RateLimiter, 'check_limit')
-        assert hasattr(RateLimiter, 'reset')
+        assert hasattr(RateLimiter, "check_limit")
+        assert hasattr(RateLimiter, "reset")
 
     @pytest.mark.asyncio
     async def test_token_bucket_basic_functionality(self):
@@ -25,10 +25,7 @@ class TestRateLimiting:
         from fastmcp_mysql.security.rate_limiting import TokenBucketLimiter
 
         # 10 requests per minute, burst of 5
-        limiter = TokenBucketLimiter(
-            requests_per_minute=10,
-            burst_size=5
-        )
+        limiter = TokenBucketLimiter(requests_per_minute=10, burst_size=5)
 
         # Should allow burst of 5 requests immediately
         for i in range(5):
@@ -45,10 +42,7 @@ class TestRateLimiting:
         from fastmcp_mysql.security.rate_limiting import TokenBucketLimiter
 
         # Fast refill for testing: 60 requests per minute = 1 per second
-        limiter = TokenBucketLimiter(
-            requests_per_minute=60,
-            burst_size=2
-        )
+        limiter = TokenBucketLimiter(requests_per_minute=60, burst_size=2)
 
         # Use up all tokens
         await limiter.check_limit("user1")
@@ -125,9 +119,7 @@ class TestRateLimiting:
         # Default limit: 10 per minute
         # Special user: 20 per minute
         limiter = TokenBucketLimiter(
-            requests_per_minute=10,
-            burst_size=5,
-            per_user_limits={"special_user": 20}
+            requests_per_minute=10, burst_size=5, per_user_limits={"special_user": 20}
         )
 
         # Regular user hits limit at 5 (burst size)
@@ -146,10 +138,7 @@ class TestRateLimiting:
         """Test rate limiter reset functionality."""
         from fastmcp_mysql.security.rate_limiting import TokenBucketLimiter
 
-        limiter = TokenBucketLimiter(
-            requests_per_minute=10,
-            burst_size=2
-        )
+        limiter = TokenBucketLimiter(requests_per_minute=10, burst_size=2)
 
         # Use up tokens
         await limiter.check_limit("user1")
@@ -171,12 +160,12 @@ class TestRateLimiting:
         settings = SecuritySettings(
             enable_rate_limiting=True,
             rate_limit_requests_per_minute=10,
-            rate_limit_burst_size=2
+            rate_limit_burst_size=2,
         )
 
         limiter = TokenBucketLimiter(
             requests_per_minute=settings.rate_limit_requests_per_minute,
-            burst_size=settings.rate_limit_burst_size
+            burst_size=settings.rate_limit_burst_size,
         )
 
         # Should allow burst
@@ -191,10 +180,7 @@ class TestRateLimiting:
         """Test rate limiting under concurrent load."""
         from fastmcp_mysql.security.rate_limiting import TokenBucketLimiter
 
-        limiter = TokenBucketLimiter(
-            requests_per_minute=60,
-            burst_size=10
-        )
+        limiter = TokenBucketLimiter(requests_per_minute=60, burst_size=10)
 
         # Simulate concurrent requests
         async def make_request(user_id: str, request_id: int):
@@ -218,23 +204,21 @@ class TestRateLimiting:
         limiter = create_rate_limiter(
             algorithm=RateLimitAlgorithm.TOKEN_BUCKET,
             requests_per_minute=60,
-            burst_size=10
+            burst_size=10,
         )
         assert limiter is not None
         assert await limiter.check_limit("user1") is True
 
         # Sliding window
         limiter = create_rate_limiter(
-            algorithm=RateLimitAlgorithm.SLIDING_WINDOW,
-            requests_per_minute=60
+            algorithm=RateLimitAlgorithm.SLIDING_WINDOW, requests_per_minute=60
         )
         assert limiter is not None
         assert await limiter.check_limit("user2") is True
 
         # Fixed window
         limiter = create_rate_limiter(
-            algorithm=RateLimitAlgorithm.FIXED_WINDOW,
-            requests_per_minute=60
+            algorithm=RateLimitAlgorithm.FIXED_WINDOW, requests_per_minute=60
         )
         assert limiter is not None
         assert await limiter.check_limit("user3") is True

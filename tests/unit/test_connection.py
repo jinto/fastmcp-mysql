@@ -25,7 +25,7 @@ class TestConnectionConfig:
             port=3306,
             user="testuser",
             password="testpass",
-            database="testdb"
+            database="testdb",
         )
 
         assert config.pool_size == 10
@@ -47,7 +47,7 @@ class TestConnectionConfig:
             charset="utf8",
             connect_timeout=30,
             autocommit=False,
-            echo=True
+            echo=True,
         )
 
         assert config.host == "192.168.1.100"
@@ -90,7 +90,7 @@ class TestConnectionManager:
             port=3306,
             user="testuser",
             password="testpass",
-            database="testdb"
+            database="testdb",
         )
 
     @pytest.fixture
@@ -129,10 +129,7 @@ class TestConnectionManager:
 
         with patch("aiomysql.create_pool", new_callable=AsyncMock) as mock_create:
             # First attempt fails, second succeeds
-            mock_create.side_effect = [
-                OperationalError("Connection failed"),
-                mock_pool
-            ]
+            mock_create.side_effect = [OperationalError("Connection failed"), mock_pool]
 
             await manager.initialize()
 
@@ -185,10 +182,12 @@ class TestConnectionManager:
 
         # cursor() returns an async context manager
         mock_conn = AsyncMock()
-        mock_conn.cursor = MagicMock(return_value=AsyncMock(
-            __aenter__=AsyncMock(return_value=mock_cursor),
-            __aexit__=AsyncMock(return_value=None)
-        ))
+        mock_conn.cursor = MagicMock(
+            return_value=AsyncMock(
+                __aenter__=AsyncMock(return_value=mock_cursor),
+                __aexit__=AsyncMock(return_value=None),
+            )
+        )
 
         mock_acquire_cm = AsyncMock()
         mock_acquire_cm.__aenter__.return_value = mock_conn
@@ -201,7 +200,9 @@ class TestConnectionManager:
         result = await manager.execute("SELECT * FROM users WHERE id = %s", (1,))
 
         assert result == [{"id": 1, "name": "test"}]
-        mock_cursor.execute.assert_called_once_with("SELECT * FROM users WHERE id = %s", (1,))
+        mock_cursor.execute.assert_called_once_with(
+            "SELECT * FROM users WHERE id = %s", (1,)
+        )
 
     @pytest.mark.asyncio
     async def test_execute_query_with_dict_cursor(self, manager):
@@ -212,10 +213,12 @@ class TestConnectionManager:
 
         # cursor() returns an async context manager
         mock_conn = AsyncMock()
-        mock_conn.cursor = MagicMock(return_value=AsyncMock(
-            __aenter__=AsyncMock(return_value=mock_cursor),
-            __aexit__=AsyncMock(return_value=None)
-        ))
+        mock_conn.cursor = MagicMock(
+            return_value=AsyncMock(
+                __aenter__=AsyncMock(return_value=mock_cursor),
+                __aexit__=AsyncMock(return_value=None),
+            )
+        )
 
         mock_acquire_cm = AsyncMock()
         mock_acquire_cm.__aenter__.return_value = mock_conn
@@ -225,10 +228,7 @@ class TestConnectionManager:
         mock_pool.acquire.return_value = mock_acquire_cm
         manager._pool = mock_pool
 
-        await manager.execute(
-            "SELECT * FROM users",
-            cursor_class=aiomysql.DictCursor
-        )
+        await manager.execute("SELECT * FROM users", cursor_class=aiomysql.DictCursor)
 
         mock_conn.cursor.assert_called_once_with(aiomysql.DictCursor)
 
@@ -240,10 +240,12 @@ class TestConnectionManager:
 
         # cursor() returns an async context manager
         mock_conn = AsyncMock()
-        mock_conn.cursor = MagicMock(return_value=AsyncMock(
-            __aenter__=AsyncMock(return_value=mock_cursor),
-            __aexit__=AsyncMock(return_value=None)
-        ))
+        mock_conn.cursor = MagicMock(
+            return_value=AsyncMock(
+                __aenter__=AsyncMock(return_value=mock_cursor),
+                __aexit__=AsyncMock(return_value=None),
+            )
+        )
 
         mock_acquire_cm = AsyncMock()
         mock_acquire_cm.__aenter__.return_value = mock_conn
@@ -338,7 +340,7 @@ class TestConnectionRetry:
             port=3306,
             user="testuser",
             password="testpass",
-            database="testdb"
+            database="testdb",
         )
         manager = ConnectionManager(config)
 

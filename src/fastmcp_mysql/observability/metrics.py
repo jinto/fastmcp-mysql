@@ -12,6 +12,7 @@ from typing import Any
 
 class MetricType(Enum):
     """Types of metrics."""
+
     COUNTER = "counter"
     GAUGE = "gauge"
     HISTOGRAM = "histogram"
@@ -21,6 +22,7 @@ class MetricType(Enum):
 @dataclass
 class Metric:
     """Base metric class."""
+
     name: str
     type: MetricType
     description: str
@@ -31,6 +33,7 @@ class Metric:
 @dataclass
 class QueryMetrics:
     """Metrics for query execution."""
+
     total_queries: int = 0
     successful_queries: int = 0
     failed_queries: int = 0
@@ -38,8 +41,14 @@ class QueryMetrics:
     queries_by_type: dict[str, int] = field(default_factory=lambda: defaultdict(int))
     slow_queries: list[dict[str, Any]] = field(default_factory=list)
 
-    def record_query(self, query_type: str, duration_ms: float, success: bool,
-                    query: str, threshold_ms: float = 1000):
+    def record_query(
+        self,
+        query_type: str,
+        duration_ms: float,
+        success: bool,
+        query: str,
+        threshold_ms: float = 1000,
+    ):
         """Record query execution metrics."""
         self.total_queries += 1
         self.queries_by_type[query_type] += 1
@@ -52,12 +61,14 @@ class QueryMetrics:
 
         # Track slow queries
         if duration_ms > threshold_ms:
-            self.slow_queries.append({
-                "query": query[:200],  # Truncate long queries
-                "duration_ms": duration_ms,
-                "timestamp": datetime.now(timezone.utc).isoformat(),
-                "type": query_type,
-            })
+            self.slow_queries.append(
+                {
+                    "query": query[:200],  # Truncate long queries
+                    "duration_ms": duration_ms,
+                    "timestamp": datetime.now(timezone.utc).isoformat(),
+                    "type": query_type,
+                }
+            )
             # Keep only last 100 slow queries
             if len(self.slow_queries) > 100:
                 self.slow_queries = self.slow_queries[-100:]
@@ -87,6 +98,7 @@ class QueryMetrics:
 @dataclass
 class ConnectionPoolMetrics:
     """Metrics for connection pool."""
+
     total_connections: int = 0
     active_connections: int = 0
     idle_connections: int = 0
@@ -128,6 +140,7 @@ class ConnectionPoolMetrics:
 @dataclass
 class CacheMetrics:
     """Metrics for cache performance."""
+
     hits: int = 0
     misses: int = 0
     evictions: int = 0
@@ -168,10 +181,15 @@ class CacheMetrics:
 @dataclass
 class ErrorMetrics:
     """Metrics for error tracking."""
-    errors_by_type: dict[str, int] = field(default_factory=lambda: defaultdict(int))
-    error_timeline: deque[dict[str, Any]] = field(default_factory=lambda: deque(maxlen=1000))
 
-    def record_error(self, error_type: str, error_msg: str, context: dict[str, Any] | None = None):
+    errors_by_type: dict[str, int] = field(default_factory=lambda: defaultdict(int))
+    error_timeline: deque[dict[str, Any]] = field(
+        default_factory=lambda: deque(maxlen=1000)
+    )
+
+    def record_error(
+        self, error_type: str, error_msg: str, context: dict[str, Any] | None = None
+    ):
         """Record an error occurrence."""
         self.errors_by_type[error_type] += 1
 
@@ -192,7 +210,9 @@ class ErrorMetrics:
         window_errors = defaultdict(int)
         for error in self.error_timeline:
             # Parse timestamp
-            error_time = datetime.fromisoformat(error["timestamp"].replace('Z', '+00:00'))
+            error_time = datetime.fromisoformat(
+                error["timestamp"].replace("Z", "+00:00")
+            )
             error_timestamp = error_time.timestamp()
 
             if error_timestamp >= window_start:
@@ -218,11 +238,19 @@ class MetricsCollector:
         self._custom_metrics: dict[str, Any] = {}
         self._metric_callbacks: list[Callable[[dict[str, Any]], None]] = []
 
-    def record_query(self, query_type: str, duration_ms: float, success: bool,
-                    query: str, threshold_ms: float = 1000):
+    def record_query(
+        self,
+        query_type: str,
+        duration_ms: float,
+        success: bool,
+        query: str,
+        threshold_ms: float = 1000,
+    ):
         """Thread-safe query metrics recording."""
         with self._lock:
-            self.query_metrics.record_query(query_type, duration_ms, success, query, threshold_ms)
+            self.query_metrics.record_query(
+                query_type, duration_ms, success, query, threshold_ms
+            )
 
     def update_connection_pool(self, total: int, active: int, max_size: int):
         """Thread-safe connection pool metrics update."""
@@ -239,7 +267,9 @@ class MetricsCollector:
         with self._lock:
             self.cache_metrics.record_miss()
 
-    def record_error(self, error_type: str, error_msg: str, context: dict[str, Any] | None = None):
+    def record_error(
+        self, error_type: str, error_msg: str, context: dict[str, Any] | None = None
+    ):
         """Thread-safe error recording."""
         with self._lock:
             self.error_metrics.record_error(error_type, error_msg, context)
@@ -289,7 +319,9 @@ class MetricsCollector:
                 "errors": {
                     "by_type": dict(self.error_metrics.errors_by_type),
                     "rate_per_minute": error_rates,
-                    "recent_errors": list(self.error_metrics.error_timeline)[-10:],  # Last 10 errors
+                    "recent_errors": list(self.error_metrics.error_timeline)[
+                        -10:
+                    ],  # Last 10 errors
                 },
                 "custom": self._custom_metrics.copy(),
             }
@@ -309,57 +341,65 @@ class MetricsCollector:
         metrics = self.export_metrics()
 
         # Query metrics
-        lines.append('# HELP mysql_queries_total Total number of queries')
-        lines.append('# TYPE mysql_queries_total counter')
+        lines.append("# HELP mysql_queries_total Total number of queries")
+        lines.append("# TYPE mysql_queries_total counter")
         lines.append(f'mysql_queries_total {metrics["query"]["total"]}')
 
-        lines.append('# HELP mysql_queries_successful Successful queries')
-        lines.append('# TYPE mysql_queries_successful counter')
+        lines.append("# HELP mysql_queries_successful Successful queries")
+        lines.append("# TYPE mysql_queries_successful counter")
         lines.append(f'mysql_queries_successful {metrics["query"]["successful"]}')
 
-        lines.append('# HELP mysql_queries_failed Failed queries')
-        lines.append('# TYPE mysql_queries_failed counter')
+        lines.append("# HELP mysql_queries_failed Failed queries")
+        lines.append("# TYPE mysql_queries_failed counter")
         lines.append(f'mysql_queries_failed {metrics["query"]["failed"]}')
 
         # Query duration percentiles
         for percentile, value in metrics["query"]["duration_percentiles_ms"].items():
-            lines.append('# HELP mysql_query_duration_ms Query duration in milliseconds')
-            lines.append('# TYPE mysql_query_duration_ms summary')
-            lines.append(f'mysql_query_duration_ms{{quantile="{percentile[1:]}"}} {value}')
+            lines.append(
+                "# HELP mysql_query_duration_ms Query duration in milliseconds"
+            )
+            lines.append("# TYPE mysql_query_duration_ms summary")
+            lines.append(
+                f'mysql_query_duration_ms{{quantile="{percentile[1:]}"}} {value}'
+            )
 
         # Connection pool metrics
-        lines.append('# HELP mysql_connections_active Active connections')
-        lines.append('# TYPE mysql_connections_active gauge')
+        lines.append("# HELP mysql_connections_active Active connections")
+        lines.append("# TYPE mysql_connections_active gauge")
         lines.append(f'mysql_connections_active {metrics["connection_pool"]["active"]}')
 
-        lines.append('# HELP mysql_connections_idle Idle connections')
-        lines.append('# TYPE mysql_connections_idle gauge')
+        lines.append("# HELP mysql_connections_idle Idle connections")
+        lines.append("# TYPE mysql_connections_idle gauge")
         lines.append(f'mysql_connections_idle {metrics["connection_pool"]["idle"]}')
 
-        lines.append('# HELP mysql_connection_pool_utilization Connection pool utilization percentage')
-        lines.append('# TYPE mysql_connection_pool_utilization gauge')
-        lines.append(f'mysql_connection_pool_utilization {metrics["connection_pool"]["utilization_percent"]}')
+        lines.append(
+            "# HELP mysql_connection_pool_utilization Connection pool utilization percentage"
+        )
+        lines.append("# TYPE mysql_connection_pool_utilization gauge")
+        lines.append(
+            f'mysql_connection_pool_utilization {metrics["connection_pool"]["utilization_percent"]}'
+        )
 
         # Cache metrics
-        lines.append('# HELP mysql_cache_hits Cache hits')
-        lines.append('# TYPE mysql_cache_hits counter')
+        lines.append("# HELP mysql_cache_hits Cache hits")
+        lines.append("# TYPE mysql_cache_hits counter")
         lines.append(f'mysql_cache_hits {metrics["cache"]["hits"]}')
 
-        lines.append('# HELP mysql_cache_misses Cache misses')
-        lines.append('# TYPE mysql_cache_misses counter')
+        lines.append("# HELP mysql_cache_misses Cache misses")
+        lines.append("# TYPE mysql_cache_misses counter")
         lines.append(f'mysql_cache_misses {metrics["cache"]["misses"]}')
 
-        lines.append('# HELP mysql_cache_hit_rate Cache hit rate percentage')
-        lines.append('# TYPE mysql_cache_hit_rate gauge')
+        lines.append("# HELP mysql_cache_hit_rate Cache hit rate percentage")
+        lines.append("# TYPE mysql_cache_hit_rate gauge")
         lines.append(f'mysql_cache_hit_rate {metrics["cache"]["hit_rate_percent"]}')
 
         # Error metrics
         for error_type, count in metrics["errors"]["by_type"].items():
-            lines.append('# HELP mysql_errors_total Total errors by type')
-            lines.append('# TYPE mysql_errors_total counter')
+            lines.append("# HELP mysql_errors_total Total errors by type")
+            lines.append("# TYPE mysql_errors_total counter")
             lines.append(f'mysql_errors_total{{type="{error_type}"}} {count}')
 
-        return '\n'.join(lines)
+        return "\n".join(lines)
 
 
 # Global metrics collector instance

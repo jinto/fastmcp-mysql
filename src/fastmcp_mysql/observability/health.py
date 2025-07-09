@@ -15,6 +15,7 @@ from .metrics import get_metrics_collector
 
 class HealthStatus(Enum):
     """Health status levels."""
+
     HEALTHY = "healthy"
     DEGRADED = "degraded"
     UNHEALTHY = "unhealthy"
@@ -23,6 +24,7 @@ class HealthStatus(Enum):
 @dataclass
 class ComponentHealth:
     """Health status of a component."""
+
     name: str
     status: HealthStatus
     message: str
@@ -45,6 +47,7 @@ class ComponentHealth:
 @dataclass
 class HealthCheckResult:
     """Overall health check result."""
+
     status: HealthStatus
     components: list[ComponentHealth]
     timestamp: datetime = field(default_factory=lambda: datetime.now(timezone.utc))
@@ -59,19 +62,27 @@ class HealthCheckResult:
             "components": [c.to_dict() for c in self.components],
             "summary": {
                 "total_components": len(self.components),
-                "healthy": sum(1 for c in self.components if c.status == HealthStatus.HEALTHY),
-                "degraded": sum(1 for c in self.components if c.status == HealthStatus.DEGRADED),
-                "unhealthy": sum(1 for c in self.components if c.status == HealthStatus.UNHEALTHY),
-            }
+                "healthy": sum(
+                    1 for c in self.components if c.status == HealthStatus.HEALTHY
+                ),
+                "degraded": sum(
+                    1 for c in self.components if c.status == HealthStatus.DEGRADED
+                ),
+                "unhealthy": sum(
+                    1 for c in self.components if c.status == HealthStatus.UNHEALTHY
+                ),
+            },
         }
 
 
 class HealthChecker:
     """Health check manager for the application."""
 
-    def __init__(self,
-                 connection_manager: ConnectionManager | None = None,
-                 cache_manager: CacheManager | None = None):
+    def __init__(
+        self,
+        connection_manager: ConnectionManager | None = None,
+        cache_manager: CacheManager | None = None,
+    ):
         """Initialize health checker.
 
         Args:
@@ -98,7 +109,9 @@ class HealthChecker:
         """
         self._thresholds[name] = value
 
-    def register_check(self, name: str, check_func: Callable[[], Awaitable[ComponentHealth]]):
+    def register_check(
+        self, name: str, check_func: Callable[[], Awaitable[ComponentHealth]]
+    ):
         """Register a custom health check.
 
         Args:
@@ -117,7 +130,7 @@ class HealthChecker:
                     name="database",
                     status=HealthStatus.UNHEALTHY,
                     message="Connection manager not initialized",
-                    check_duration_ms=(time.time() - start_time) * 1000
+                    check_duration_ms=(time.time() - start_time) * 1000,
                 )
 
             # Check basic connectivity
@@ -128,15 +141,18 @@ class HealthChecker:
                     name="database",
                     status=HealthStatus.UNHEALTHY,
                     message="Database connection failed",
-                    check_duration_ms=(time.time() - start_time) * 1000
+                    check_duration_ms=(time.time() - start_time) * 1000,
                 )
 
             # Get pool metrics
             pool_metrics = self.connection_manager.get_pool_metrics()
 
             # Check pool utilization
-            utilization = (pool_metrics["used_connections"] / pool_metrics["max_size"] * 100) \
-                         if pool_metrics["max_size"] > 0 else 0
+            utilization = (
+                (pool_metrics["used_connections"] / pool_metrics["max_size"] * 100)
+                if pool_metrics["max_size"] > 0
+                else 0
+            )
 
             status = HealthStatus.HEALTHY
             message = "Database is healthy"
@@ -153,7 +169,7 @@ class HealthChecker:
                     "pool_metrics": pool_metrics,
                     "utilization_percent": utilization,
                 },
-                check_duration_ms=(time.time() - start_time) * 1000
+                check_duration_ms=(time.time() - start_time) * 1000,
             )
 
         except Exception as e:
@@ -161,7 +177,7 @@ class HealthChecker:
                 name="database",
                 status=HealthStatus.UNHEALTHY,
                 message=f"Health check failed: {str(e)}",
-                check_duration_ms=(time.time() - start_time) * 1000
+                check_duration_ms=(time.time() - start_time) * 1000,
             )
 
     async def check_cache(self) -> ComponentHealth:
@@ -174,7 +190,7 @@ class HealthChecker:
                     name="cache",
                     status=HealthStatus.HEALTHY,
                     message="Cache not configured",
-                    check_duration_ms=(time.time() - start_time) * 1000
+                    check_duration_ms=(time.time() - start_time) * 1000,
                 )
 
             # Get cache metrics
@@ -186,7 +202,10 @@ class HealthChecker:
             message = "Cache is healthy"
 
             # Check hit rate
-            if hit_rate < self._thresholds["cache_hit_rate"] and metrics.hits + metrics.misses > 100:
+            if (
+                hit_rate < self._thresholds["cache_hit_rate"]
+                and metrics.hits + metrics.misses > 100
+            ):
                 status = HealthStatus.DEGRADED
                 message = f"Low cache hit rate: {hit_rate:.1f}%"
 
@@ -207,7 +226,7 @@ class HealthChecker:
                     "evictions": metrics.evictions,
                     "size": metrics.current_size,
                 },
-                check_duration_ms=(time.time() - start_time) * 1000
+                check_duration_ms=(time.time() - start_time) * 1000,
             )
 
         except Exception as e:
@@ -215,7 +234,7 @@ class HealthChecker:
                 name="cache",
                 status=HealthStatus.UNHEALTHY,
                 message=f"Health check failed: {str(e)}",
-                check_duration_ms=(time.time() - start_time) * 1000
+                check_duration_ms=(time.time() - start_time) * 1000,
             )
 
     async def check_query_performance(self) -> ComponentHealth:
@@ -251,7 +270,7 @@ class HealthChecker:
                     "percentiles_ms": percentiles,
                     "slow_queries_count": len(metrics.slow_queries),
                 },
-                check_duration_ms=(time.time() - start_time) * 1000
+                check_duration_ms=(time.time() - start_time) * 1000,
             )
 
         except Exception as e:
@@ -259,7 +278,7 @@ class HealthChecker:
                 name="query_performance",
                 status=HealthStatus.UNHEALTHY,
                 message=f"Health check failed: {str(e)}",
-                check_duration_ms=(time.time() - start_time) * 1000
+                check_duration_ms=(time.time() - start_time) * 1000,
             )
 
     async def check_errors(self) -> ComponentHealth:
@@ -268,15 +287,20 @@ class HealthChecker:
 
         try:
             # Get error metrics
-            error_rates = self.metrics_collector.error_metrics.get_error_rate(60)  # Last minute
-            total_errors = sum(self.metrics_collector.error_metrics.errors_by_type.values())
+            error_rates = self.metrics_collector.error_metrics.get_error_rate(
+                60
+            )  # Last minute
+            total_errors = sum(
+                self.metrics_collector.error_metrics.errors_by_type.values()
+            )
 
             status = HealthStatus.HEALTHY
             message = "Error rates are normal"
 
             # Check if any error rate is too high
             high_error_types = [
-                error_type for error_type, rate in error_rates.items()
+                error_type
+                for error_type, rate in error_rates.items()
                 if rate > 10  # More than 10 errors per minute
             ]
 
@@ -291,9 +315,11 @@ class HealthChecker:
                 details={
                     "total_errors": total_errors,
                     "error_rates_per_minute": error_rates,
-                    "error_types": dict(self.metrics_collector.error_metrics.errors_by_type),
+                    "error_types": dict(
+                        self.metrics_collector.error_metrics.errors_by_type
+                    ),
                 },
-                check_duration_ms=(time.time() - start_time) * 1000
+                check_duration_ms=(time.time() - start_time) * 1000,
             )
 
         except Exception as e:
@@ -301,7 +327,7 @@ class HealthChecker:
                 name="errors",
                 status=HealthStatus.UNHEALTHY,
                 message=f"Health check failed: {str(e)}",
-                check_duration_ms=(time.time() - start_time) * 1000
+                check_duration_ms=(time.time() - start_time) * 1000,
             )
 
     async def check_all(self) -> HealthCheckResult:
@@ -329,14 +355,18 @@ class HealthChecker:
                 components.append(result)
             else:
                 # Handle exceptions
-                components.append(ComponentHealth(
-                    name="unknown",
-                    status=HealthStatus.UNHEALTHY,
-                    message=f"Check failed: {str(result)}",
-                ))
+                components.append(
+                    ComponentHealth(
+                        name="unknown",
+                        status=HealthStatus.UNHEALTHY,
+                        message=f"Check failed: {str(result)}",
+                    )
+                )
 
         # Determine overall status
-        unhealthy_count = sum(1 for c in components if c.status == HealthStatus.UNHEALTHY)
+        unhealthy_count = sum(
+            1 for c in components if c.status == HealthStatus.UNHEALTHY
+        )
         degraded_count = sum(1 for c in components if c.status == HealthStatus.DEGRADED)
 
         if unhealthy_count > 0:

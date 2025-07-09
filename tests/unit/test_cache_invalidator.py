@@ -64,20 +64,37 @@ class TestCacheInvalidator:
         assert invalidator.get_query_type("select id from orders") == QueryType.SELECT
 
         # INSERT queries
-        assert invalidator.get_query_type("INSERT INTO users VALUES (1, 'test')") == QueryType.INSERT
-        assert invalidator.get_query_type("insert into logs (msg) values ('test')") == QueryType.INSERT
+        assert (
+            invalidator.get_query_type("INSERT INTO users VALUES (1, 'test')")
+            == QueryType.INSERT
+        )
+        assert (
+            invalidator.get_query_type("insert into logs (msg) values ('test')")
+            == QueryType.INSERT
+        )
 
         # UPDATE queries
-        assert invalidator.get_query_type("UPDATE users SET name='test'") == QueryType.UPDATE
-        assert invalidator.get_query_type("update orders set status=1") == QueryType.UPDATE
+        assert (
+            invalidator.get_query_type("UPDATE users SET name='test'")
+            == QueryType.UPDATE
+        )
+        assert (
+            invalidator.get_query_type("update orders set status=1") == QueryType.UPDATE
+        )
 
         # DELETE queries
-        assert invalidator.get_query_type("DELETE FROM users WHERE id=1") == QueryType.DELETE
+        assert (
+            invalidator.get_query_type("DELETE FROM users WHERE id=1")
+            == QueryType.DELETE
+        )
         assert invalidator.get_query_type("delete from logs") == QueryType.DELETE
 
         # DDL queries
         assert invalidator.get_query_type("CREATE TABLE test (id INT)") == QueryType.DDL
-        assert invalidator.get_query_type("ALTER TABLE users ADD COLUMN age INT") == QueryType.DDL
+        assert (
+            invalidator.get_query_type("ALTER TABLE users ADD COLUMN age INT")
+            == QueryType.DDL
+        )
         assert invalidator.get_query_type("DROP TABLE temp") == QueryType.DDL
         assert invalidator.get_query_type("TRUNCATE TABLE logs") == QueryType.DDL
 
@@ -127,24 +144,21 @@ class TestCacheInvalidator:
 
         # INSERT invalidation
         await invalidator.invalidate_on_write(
-            "INSERT INTO users VALUES (1, 'test')",
-            cache
+            "INSERT INTO users VALUES (1, 'test')", cache
         )
         assert "*:users:*" in cache.deleted_patterns
 
         # UPDATE invalidation
         cache.deleted_patterns.clear()
         await invalidator.invalidate_on_write(
-            "UPDATE orders SET status = 'complete'",
-            cache
+            "UPDATE orders SET status = 'complete'", cache
         )
         assert "*:orders:*" in cache.deleted_patterns
 
         # DELETE invalidation
         cache.deleted_patterns.clear()
         await invalidator.invalidate_on_write(
-            "DELETE FROM products WHERE expired = 1",
-            cache
+            "DELETE FROM products WHERE expired = 1", cache
         )
         assert "*:products:*" in cache.deleted_patterns
 
@@ -157,7 +171,7 @@ class TestCacheInvalidator:
         # UPDATE with JOIN should invalidate all involved tables
         await invalidator.invalidate_on_write(
             "UPDATE users u JOIN orders o ON u.id = o.user_id SET u.total = o.amount",
-            cache
+            cache,
         )
 
         assert "*:users:*" in cache.deleted_patterns
@@ -171,8 +185,7 @@ class TestCacheInvalidator:
 
         # DDL should clear entire cache
         await invalidator.invalidate_on_write(
-            "ALTER TABLE users ADD COLUMN age INT",
-            cache
+            "ALTER TABLE users ADD COLUMN age INT", cache
         )
 
         assert cache.cleared
@@ -183,10 +196,7 @@ class TestCacheInvalidator:
         cache = MockCache()
         invalidator = CacheInvalidator()
 
-        await invalidator.invalidate_on_write(
-            "SELECT * FROM users",
-            cache
-        )
+        await invalidator.invalidate_on_write("SELECT * FROM users", cache)
 
         assert len(cache.deleted_patterns) == 0
         assert not cache.cleared
@@ -199,8 +209,7 @@ class TestCacheInvalidator:
         invalidator = CacheInvalidator(strategy=InvalidationStrategy.CONSERVATIVE)
 
         await invalidator.invalidate_on_write(
-            "INSERT INTO users VALUES (1, 'test')",
-            cache
+            "INSERT INTO users VALUES (1, 'test')", cache
         )
 
         # Should invalidate with more specific pattern
@@ -213,10 +222,7 @@ class TestCacheInvalidator:
         # Add table dependencies
         invalidator.add_dependency("orders", ["users", "products"])
 
-        await invalidator.invalidate_on_write(
-            "UPDATE orders SET status = 1",
-            cache
-        )
+        await invalidator.invalidate_on_write("UPDATE orders SET status = 1", cache)
 
         # Should invalidate orders and its dependencies
         assert "*:orders:*" in cache.deleted_patterns
@@ -272,9 +278,7 @@ class TestCacheInvalidator:
 
         # Specific WHERE clause - could use targeted invalidation
         await invalidator.invalidate_on_write(
-            "UPDATE users SET name = 'test' WHERE id = 123",
-            cache,
-            targeted=True
+            "UPDATE users SET name = 'test' WHERE id = 123", cache, targeted=True
         )
 
         # With targeted mode, could invalidate more specifically
@@ -290,7 +294,7 @@ class TestCacheInvalidator:
         queries = [
             "INSERT INTO users VALUES (1, 'test')",
             "UPDATE orders SET status = 1",
-            "DELETE FROM logs WHERE old = 1"
+            "DELETE FROM logs WHERE old = 1",
         ]
 
         await invalidator.invalidate_batch(queries, cache)
@@ -307,9 +311,7 @@ class TestCacheInvalidator:
 
         # Invalidate with database context
         await invalidator.invalidate_on_write(
-            "INSERT INTO users VALUES (1, 'test')",
-            cache,
-            database="mydb"
+            "INSERT INTO users VALUES (1, 'test')", cache, database="mydb"
         )
 
         # Should include database in pattern

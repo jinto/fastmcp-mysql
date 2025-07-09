@@ -1,6 +1,5 @@
 """Tests for SQL injection detection and prevention."""
 
-
 import pytest
 
 from fastmcp_mysql.security import SecurityManager
@@ -16,8 +15,8 @@ class TestSQLInjectionDetection:
         # This will fail until we implement the detector
 
         # Interface should require these methods
-        assert hasattr(InjectionDetector, 'detect')
-        assert hasattr(InjectionDetector, 'validate_parameters')
+        assert hasattr(InjectionDetector, "detect")
+        assert hasattr(InjectionDetector, "validate_parameters")
 
     @pytest.mark.asyncio
     async def test_injection_patterns_detected(self, sql_injection_payloads):
@@ -109,15 +108,13 @@ class TestSQLInjectionDetection:
 
         detector = SQLInjectionDetector()
         manager = SecurityManager(
-            settings=security_settings,
-            injection_detector=detector
+            settings=security_settings, injection_detector=detector
         )
 
         # Test with injection in parameter
         with pytest.raises(InjectionError) as exc:
             await manager.validate_query(
-                "SELECT * FROM users WHERE id = %s",
-                ("1' OR '1'='1",)
+                "SELECT * FROM users WHERE id = %s", ("1' OR '1'='1",)
             )
         assert "injection" in str(exc.value).lower()
 
@@ -143,8 +140,10 @@ class TestSQLInjectionDetection:
         for attack in multi_statement_attacks:
             threats = detector.validate_parameters((attack,))
             assert threats, f"Failed to detect multi-statement attack: {attack}"
-            assert any("multiple statements" in t.lower() or "semicolon" in t.lower()
-                      for t in threats)
+            assert any(
+                "multiple statements" in t.lower() or "semicolon" in t.lower()
+                for t in threats
+            )
 
     def test_comment_based_injection(self):
         """Test detection of comment-based injection."""

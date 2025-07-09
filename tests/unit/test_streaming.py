@@ -1,4 +1,5 @@
 """Unit tests for streaming query results."""
+
 import asyncio
 from unittest.mock import AsyncMock, Mock
 
@@ -57,7 +58,9 @@ class TestStreaming:
 
         # Test streaming
         chunks_received = []
-        async for chunk in manager.execute_streaming("SELECT * FROM test", chunk_size=10):
+        async for chunk in manager.execute_streaming(
+            "SELECT * FROM test", chunk_size=10
+        ):
             chunks_received.append(chunk)
 
         # Verify we received all data in chunks
@@ -82,7 +85,7 @@ class TestStreaming:
         mock_cursor.fetchmany.side_effect = [
             [{"id": 1, "name": "test1"}],
             [{"id": 2, "name": "test2"}],
-            []  # End of results
+            [],  # End of results
         ]
         mock_cursor.description = [("id",), ("name",)]
 
@@ -104,9 +107,7 @@ class TestStreaming:
         # Test with parameters
         results = []
         async for chunk in manager.execute_streaming(
-            "SELECT * FROM users WHERE age > %s",
-            params=(18,),
-            chunk_size=1
+            "SELECT * FROM users WHERE age > %s", params=(18,), chunk_size=1
         ):
             results.extend(chunk)
 
@@ -199,8 +200,7 @@ class TestStreaming:
         chunk_count = 0
 
         async for chunk in manager.execute_streaming(
-            "SELECT * FROM large_table",
-            chunk_size=chunk_size
+            "SELECT * FROM large_table", chunk_size=chunk_size
         ):
             total_received += len(chunk)
             chunk_count += 1
@@ -236,8 +236,7 @@ class TestStreaming:
 
         # Process streaming
         async for _chunk in manager.execute_streaming(
-            "SELECT * FROM huge_table",
-            chunk_size=100
+            "SELECT * FROM huge_table", chunk_size=100
         ):
             # Process chunk (simulating work)
             await asyncio.sleep(0.01)

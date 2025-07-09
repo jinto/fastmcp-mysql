@@ -32,9 +32,10 @@ class TestServerCreation:
         """Test server creation fails with invalid configuration."""
         # Mock settings to raise validation error
         from pydantic import ValidationError
+
         mock_settings_class.side_effect = ValidationError.from_exception_data(
             "ValidationError",
-            [{"type": "missing", "loc": ("mysql_user",), "msg": "Field required"}]
+            [{"type": "missing", "loc": ("mysql_user",), "msg": "Field required"}],
         )
 
         # Verify server creation fails
@@ -78,12 +79,15 @@ class TestLoggingSetup:
         assert "format" in call_kwargs or "handlers" in call_kwargs
 
     @patch("fastmcp_mysql.server.logging")
-    @patch.dict("os.environ", {
-        "MYSQL_LOG_LEVEL": "DEBUG",
-        "MYSQL_USER": "testuser",
-        "MYSQL_PASSWORD": "testpass",
-        "MYSQL_DB": "testdb"
-    })
+    @patch.dict(
+        "os.environ",
+        {
+            "MYSQL_LOG_LEVEL": "DEBUG",
+            "MYSQL_USER": "testuser",
+            "MYSQL_PASSWORD": "testpass",
+            "MYSQL_DB": "testdb",
+        },
+    )
     def test_setup_logging_with_env_level(self, mock_logging):
         """Test logging setup with environment variable."""
         # Mock getLogger
@@ -171,7 +175,9 @@ class TestServerLifecycle:
     @pytest.mark.asyncio
     @patch("fastmcp_mysql.server.Settings")
     @patch("fastmcp_mysql.server.FastMCP")
-    async def test_server_graceful_shutdown(self, mock_fastmcp_class, mock_settings_class):
+    async def test_server_graceful_shutdown(
+        self, mock_fastmcp_class, mock_settings_class
+    ):
         """Test server handles shutdown gracefully."""
         # Mock settings
         mock_settings = Mock()

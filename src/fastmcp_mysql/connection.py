@@ -22,12 +22,14 @@ logger = logging.getLogger(__name__)
 
 class ConnectionPoolError(Exception):
     """Raised when connection pool operations fail."""
+
     pass
 
 
 @dataclass
 class SSLConfig:
     """SSL configuration for MySQL connections."""
+
     ca: str | None = None
     cert: str | None = None
     key: str | None = None
@@ -38,6 +40,7 @@ class SSLConfig:
 @dataclass
 class ConnectionConfig:
     """Configuration for MySQL connections."""
+
     host: str
     port: int
     user: str
@@ -92,18 +95,18 @@ class ConnectionManager:
                         "port": self.config.port,
                         "database": self.config.database,
                         "pool_size": self.config.pool_size,
-                    }
+                    },
                 )
                 return
             except Exception as e:
                 last_error = e
                 logger.warning(
                     f"Failed to create connection pool (attempt {attempt + 1}/{self._retry_count})",
-                    extra={"error": str(e)}
+                    extra={"error": str(e)},
                 )
 
                 if attempt < self._retry_count - 1:
-                    delay = self._retry_delay * (2 ** attempt)  # Exponential backoff
+                    delay = self._retry_delay * (2**attempt)  # Exponential backoff
                     await asyncio.sleep(delay)
 
         raise ConnectionPoolError(
@@ -165,7 +168,7 @@ class ConnectionManager:
         self,
         query: str,
         params: tuple | None = None,
-        cursor_class: type[Any] = DictCursor
+        cursor_class: type[Any] = DictCursor,
     ) -> Any:
         """Execute a query and return results.
 
@@ -196,7 +199,7 @@ class ConnectionManager:
         query: str,
         params: tuple | None = None,
         chunk_size: int = 1000,
-        cursor_class: type[Any] = SSDictCursor
+        cursor_class: type[Any] = SSDictCursor,
     ) -> AsyncIterator[list[dict[str, Any]]]:
         """Execute a query and stream results in chunks.
 
@@ -237,7 +240,7 @@ class ConnectionManager:
         page: int = 1,
         page_size: int = 10,
         max_page_size: int = 1000,
-        cursor_class: type[Any] = DictCursor
+        cursor_class: type[Any] = DictCursor,
     ) -> dict[str, Any]:
         """Execute a query with pagination support.
 
@@ -260,7 +263,9 @@ class ConnectionManager:
         page_size = min(max(1, page_size), max_page_size)  # Limit page size
 
         # First, get the total count
-        count_query = f"SELECT COUNT(*) as total FROM ({query}) as subquery"  # nosec B608
+        count_query = (
+            f"SELECT COUNT(*) as total FROM ({query}) as subquery"  # nosec B608
+        )
 
         async with self.get_connection() as conn:
             async with conn.cursor(cursor_class) as cursor:
@@ -273,7 +278,9 @@ class ConnectionManager:
                     total_count = count_result[0]
 
                 # Calculate pagination info
-                total_pages = (total_count + page_size - 1) // page_size if total_count > 0 else 0
+                total_pages = (
+                    (total_count + page_size - 1) // page_size if total_count > 0 else 0
+                )
 
                 # Adjust page if beyond total pages
                 if page > total_pages and total_pages > 0:
@@ -283,7 +290,9 @@ class ConnectionManager:
                 offset = (page - 1) * page_size
 
                 # Execute paginated query
-                paginated_query = f"{query} LIMIT {page_size} OFFSET {offset}"  # nosec B608
+                paginated_query = (
+                    f"{query} LIMIT {page_size} OFFSET {offset}"  # nosec B608
+                )
                 await cursor.execute(paginated_query, params)
                 data = await cursor.fetchall()
 
@@ -295,8 +304,8 @@ class ConnectionManager:
                 "total_count": total_count,
                 "total_pages": total_pages,
                 "has_next": page < total_pages,
-                "has_previous": page > 1
-            }
+                "has_previous": page > 1,
+            },
         }
 
     async def health_check(self) -> bool:

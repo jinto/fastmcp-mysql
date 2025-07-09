@@ -1,4 +1,5 @@
 """Unit tests for paginated query results."""
+
 from unittest.mock import AsyncMock, Mock
 
 import pytest
@@ -32,6 +33,7 @@ class TestPagination:
 
         # Setup cursor returns for different queries
         cursor_call_count = 0
+
         async def get_cursor(cursor_class):
             nonlocal cursor_call_count
             cursor_mock = AsyncMock()
@@ -60,17 +62,15 @@ class TestPagination:
                 "total_count": 100,
                 "total_pages": 10,
                 "has_next": True,
-                "has_previous": False
-            }
+                "has_previous": False,
+            },
         }
 
         manager.execute_paginated = AsyncMock(return_value=expected_result)
 
         # Test pagination
         result = await manager.execute_paginated(
-            "SELECT * FROM items",
-            page=1,
-            page_size=10
+            "SELECT * FROM items", page=1, page_size=10
         )
 
         assert result["data"] == data_cursor.fetchall.return_value
@@ -120,8 +120,8 @@ class TestPagination:
                     "page": page,
                     "page_size": page_size,
                     "total_count": total_count,
-                    "total_pages": (total_count + page_size - 1) // page_size
-                }
+                    "total_pages": (total_count + page_size - 1) // page_size,
+                },
             }
 
         manager.execute_paginated = execute_paginated_mock
@@ -131,7 +131,7 @@ class TestPagination:
             "SELECT * FROM users WHERE active = %s",
             params=(True,),
             page=2,
-            page_size=10
+            page_size=10,
         )
 
         assert len(result["data"]) == 10
@@ -155,11 +155,15 @@ class TestPagination:
 
         # Create paginated version
         async def execute_paginated_mock(query, params=None, page=1, page_size=10):
-            count_results = await manager.execute(f"SELECT COUNT(*) as total FROM ({query}) as subquery", params)
+            count_results = await manager.execute(
+                f"SELECT COUNT(*) as total FROM ({query}) as subquery", params
+            )
             total_count = count_results[0]["total"]
 
             offset = (page - 1) * page_size
-            data = await manager.execute(f"{query} LIMIT {page_size} OFFSET {offset}", params)
+            data = await manager.execute(
+                f"{query} LIMIT {page_size} OFFSET {offset}", params
+            )
 
             return {
                 "data": data,
@@ -167,8 +171,12 @@ class TestPagination:
                     "page": page,
                     "page_size": page_size,
                     "total_count": total_count,
-                    "total_pages": 0 if total_count == 0 else (total_count + page_size - 1) // page_size
-                }
+                    "total_pages": (
+                        0
+                        if total_count == 0
+                        else (total_count + page_size - 1) // page_size
+                    ),
+                },
             }
 
         manager.execute_paginated = execute_paginated_mock
@@ -198,11 +206,15 @@ class TestPagination:
         manager.execute = execute_mock
 
         async def execute_paginated_mock(query, params=None, page=1, page_size=10):
-            count_results = await manager.execute(f"SELECT COUNT(*) as total FROM ({query}) as subquery", params)
+            count_results = await manager.execute(
+                f"SELECT COUNT(*) as total FROM ({query}) as subquery", params
+            )
             total_count = count_results[0]["total"]
 
             offset = (page - 1) * page_size
-            data = await manager.execute(f"{query} LIMIT {page_size} OFFSET {offset}", params)
+            data = await manager.execute(
+                f"{query} LIMIT {page_size} OFFSET {offset}", params
+            )
 
             return {
                 "data": data,
@@ -210,17 +222,15 @@ class TestPagination:
                     "page": page,
                     "page_size": page_size,
                     "total_count": total_count,
-                    "total_pages": (total_count + page_size - 1) // page_size
-                }
+                    "total_pages": (total_count + page_size - 1) // page_size,
+                },
             }
 
         manager.execute_paginated = execute_paginated_mock
 
         # Test last page
         result = await manager.execute_paginated(
-            "SELECT * FROM items",
-            page=6,
-            page_size=10
+            "SELECT * FROM items", page=6, page_size=10
         )
 
         assert len(result["data"]) == 5  # Only 5 items on last page
@@ -245,16 +255,22 @@ class TestPagination:
             if page < 1:
                 page = 1
 
-            count_results = await manager.execute(f"SELECT COUNT(*) as total FROM ({query}) as subquery", params)
+            count_results = await manager.execute(
+                f"SELECT COUNT(*) as total FROM ({query}) as subquery", params
+            )
             total_count = count_results[0]["total"]
-            total_pages = (total_count + page_size - 1) // page_size if total_count > 0 else 0
+            total_pages = (
+                (total_count + page_size - 1) // page_size if total_count > 0 else 0
+            )
 
             # Adjust page if beyond total pages
             if page > total_pages and total_pages > 0:
                 page = total_pages
 
             offset = (page - 1) * page_size
-            data = await manager.execute(f"{query} LIMIT {page_size} OFFSET {offset}", params)
+            data = await manager.execute(
+                f"{query} LIMIT {page_size} OFFSET {offset}", params
+            )
 
             return {
                 "data": data,
@@ -262,8 +278,8 @@ class TestPagination:
                     "page": page,
                     "page_size": page_size,
                     "total_count": total_count,
-                    "total_pages": total_pages
-                }
+                    "total_pages": total_pages,
+                },
             }
 
         manager.execute_paginated = execute_paginated_mock
@@ -291,15 +307,21 @@ class TestPagination:
 
         manager.execute = execute_mock
 
-        async def execute_paginated_mock(query, params=None, page=1, page_size=10, max_page_size=100):
+        async def execute_paginated_mock(
+            query, params=None, page=1, page_size=10, max_page_size=100
+        ):
             # Limit page size to maximum
             page_size = min(page_size, max_page_size)
 
-            count_results = await manager.execute(f"SELECT COUNT(*) as total FROM ({query}) as subquery", params)
+            count_results = await manager.execute(
+                f"SELECT COUNT(*) as total FROM ({query}) as subquery", params
+            )
             total_count = count_results[0]["total"]
 
             offset = (page - 1) * page_size
-            data = await manager.execute(f"{query} LIMIT {page_size} OFFSET {offset}", params)
+            data = await manager.execute(
+                f"{query} LIMIT {page_size} OFFSET {offset}", params
+            )
 
             return {
                 "data": data,
@@ -307,17 +329,15 @@ class TestPagination:
                     "page": page,
                     "page_size": page_size,
                     "total_count": total_count,
-                    "total_pages": (total_count + page_size - 1) // page_size
-                }
+                    "total_pages": (total_count + page_size - 1) // page_size,
+                },
             }
 
         manager.execute_paginated = execute_paginated_mock
 
         # Test custom page size
         result = await manager.execute_paginated(
-            "SELECT * FROM items",
-            page=1,
-            page_size=25
+            "SELECT * FROM items", page=1, page_size=25
         )
 
         assert len(result["data"]) == 25

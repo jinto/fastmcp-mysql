@@ -1,6 +1,5 @@
 """Rate limiter factory."""
 
-
 from ..config import RateLimitAlgorithm
 from ..interfaces import RateLimiter
 from .fixed_window import FixedWindowLimiter
@@ -12,7 +11,7 @@ def create_rate_limiter(
     algorithm: RateLimitAlgorithm,
     requests_per_minute: int,
     burst_size: int | None = None,
-    per_user_limits: dict[str, int] | None = None
+    per_user_limits: dict[str, int] | None = None,
 ) -> RateLimiter:
     """
     Create a rate limiter based on algorithm.
@@ -32,18 +31,14 @@ def create_rate_limiter(
         return TokenBucketLimiter(
             requests_per_minute=requests_per_minute,
             burst_size=burst_size,
-            per_user_limits=per_user_limits
+            per_user_limits=per_user_limits,
         )
 
     elif algorithm == RateLimitAlgorithm.SLIDING_WINDOW:
-        return SlidingWindowLimiter(
-            requests_per_minute=requests_per_minute
-        )
+        return SlidingWindowLimiter(requests_per_minute=requests_per_minute)
 
     elif algorithm == RateLimitAlgorithm.FIXED_WINDOW:
-        return FixedWindowLimiter(
-            requests_per_minute=requests_per_minute
-        )
+        return FixedWindowLimiter(requests_per_minute=requests_per_minute)
 
     else:
         raise ValueError(f"Unknown rate limiting algorithm: {algorithm}")

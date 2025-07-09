@@ -67,8 +67,7 @@ def setup_logging() -> None:
 
     # Configure root logger
     logging.basicConfig(
-        level=level_map.get(log_level, logging.INFO),
-        handlers=[handler]
+        level=level_map.get(log_level, logging.INFO), handlers=[handler]
     )
 
     # Set specific loggers
@@ -88,22 +87,28 @@ def setup_security(settings: Settings) -> SecurityManager | None:
     logger = logging.getLogger(__name__)
 
     # Check if security is enabled
-    if not getattr(settings, 'enable_security', True):
+    if not getattr(settings, "enable_security", True):
         logger.info("Security features disabled")
         return None
 
     try:
         # Create security settings from environment
         security_settings = SecuritySettings(
-            enable_injection_detection=getattr(settings, 'enable_injection_detection', True),
-            enable_rate_limiting=getattr(settings, 'enable_rate_limiting', True),
-            filter_mode=getattr(settings, 'filter_mode', FilterMode.BLACKLIST),
-            rate_limit_requests_per_minute=getattr(settings, 'rate_limit_rpm', 60),
-            rate_limit_burst_size=getattr(settings, 'rate_limit_burst', 10),
+            enable_injection_detection=getattr(
+                settings, "enable_injection_detection", True
+            ),
+            enable_rate_limiting=getattr(settings, "enable_rate_limiting", True),
+            filter_mode=getattr(settings, "filter_mode", FilterMode.BLACKLIST),
+            rate_limit_requests_per_minute=getattr(settings, "rate_limit_rpm", 60),
+            rate_limit_burst_size=getattr(settings, "rate_limit_burst", 10),
         )
 
         # Create components
-        injection_detector = SQLInjectionDetector() if security_settings.enable_injection_detection else None
+        injection_detector = (
+            SQLInjectionDetector()
+            if security_settings.enable_injection_detection
+            else None
+        )
 
         # Create filter based on mode
         query_filter = None
@@ -119,7 +124,7 @@ def setup_security(settings: Settings) -> SecurityManager | None:
             rate_limiter = create_rate_limiter(
                 algorithm=security_settings.rate_limit_algorithm,
                 requests_per_minute=security_settings.rate_limit_requests_per_minute,
-                burst_size=security_settings.rate_limit_burst_size
+                burst_size=security_settings.rate_limit_burst_size,
             )
 
         # Create security manager
@@ -127,7 +132,7 @@ def setup_security(settings: Settings) -> SecurityManager | None:
             settings=security_settings,
             injection_detector=injection_detector,
             query_filter=query_filter,
-            rate_limiter=rate_limiter
+            rate_limiter=rate_limiter,
         )
 
         # Set global security manager
@@ -138,8 +143,8 @@ def setup_security(settings: Settings) -> SecurityManager | None:
             extra={
                 "injection_detection": security_settings.enable_injection_detection,
                 "rate_limiting": security_settings.enable_rate_limiting,
-                "filter_mode": security_settings.filter_mode.value
-            }
+                "filter_mode": security_settings.filter_mode.value,
+            },
         )
 
         return manager
@@ -206,12 +211,10 @@ def create_server() -> FastMCP:
             "port": settings.port,
             "database": settings.db,
             "user": settings.user,
-            "allow_write": any([
-                settings.allow_insert,
-                settings.allow_update,
-                settings.allow_delete
-            ])
-        }
+            "allow_write": any(
+                [settings.allow_insert, settings.allow_update, settings.allow_delete]
+            ),
+        },
     )
 
     # Initialize connection on first use
@@ -230,7 +233,7 @@ def create_server() -> FastMCP:
         query: str,
         params: list[Any] | None = None,
         database: str | None = None,
-        context: Context | None = None
+        context: Context | None = None,
     ) -> dict[str, Any]:
         """Execute a MySQL query.
 
@@ -247,6 +250,7 @@ def create_server() -> FastMCP:
         await ensure_connection()
 
         from .tools.query import mysql_query as _mysql_query
+
         return await _mysql_query(query, params, database, context)
 
     return mcp

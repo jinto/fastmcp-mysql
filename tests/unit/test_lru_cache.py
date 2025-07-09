@@ -1,4 +1,5 @@
 """Unit tests for LRU cache implementation."""
+
 import asyncio
 
 import pytest
@@ -59,7 +60,7 @@ class TestLRUCache:
 
         # Check eviction
         assert await cache.get("key1") == "value1"  # Still exists
-        assert await cache.get("key2") is None      # Evicted
+        assert await cache.get("key2") is None  # Evicted
         assert await cache.get("key3") == "value3"  # Still exists
         assert await cache.get("key4") == "value4"  # New key
 
@@ -120,9 +121,9 @@ class TestLRUCache:
         await cache.set("key4", "value4")
 
         assert await cache.get("key1") == "updated_value1"  # Still exists (was updated)
-        assert await cache.get("key2") is None              # Evicted
-        assert await cache.get("key3") == "value3"          # Still exists
-        assert await cache.get("key4") == "value4"          # New key
+        assert await cache.get("key2") is None  # Evicted
+        assert await cache.get("key3") == "value3"  # Still exists
+        assert await cache.get("key4") == "value4"  # New key
 
         await cache.close()
 
@@ -210,7 +211,7 @@ class TestLRUCache:
         # Generate hits and misses
         assert await cache.get("key1") == "value1"  # Hit
         assert await cache.get("key1") == "value1"  # Hit
-        assert await cache.get("key3") is None      # Miss
+        assert await cache.get("key3") is None  # Miss
 
         # Fill cache and trigger eviction
         await cache.set("key3", "value3")
@@ -265,18 +266,12 @@ class TestLRUCache:
 
         # Concurrent writes
         await asyncio.gather(
-            writer(0, 25),
-            writer(25, 25),
-            writer(50, 25),
-            writer(75, 25)
+            writer(0, 25), writer(25, 25), writer(50, 25), writer(75, 25)
         )
 
         # Concurrent reads
         hits = await asyncio.gather(
-            reader(0, 25),
-            reader(25, 25),
-            reader(50, 25),
-            reader(75, 25)
+            reader(0, 25), reader(25, 25), reader(50, 25), reader(75, 25)
         )
 
         # All reads should hit
@@ -329,7 +324,7 @@ class TestLRUCache:
         await cache.set("key4", "value4")
 
         assert await cache.get("key1") == "value1"  # Still exists (was checked)
-        assert await cache.get("key2") is None      # Evicted
+        assert await cache.get("key2") is None  # Evicted
         assert await cache.get("key3") == "value3"  # Still exists
 
         await cache.close()

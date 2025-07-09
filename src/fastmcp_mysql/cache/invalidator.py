@@ -1,4 +1,5 @@
 """Cache invalidation logic for query operations."""
+
 import re
 from dataclasses import dataclass, field
 from enum import Enum
@@ -8,6 +9,7 @@ from .interfaces import CacheInterface, CacheKeyGenerator
 
 class QueryType(Enum):
     """SQL query types."""
+
     SELECT = "SELECT"
     INSERT = "INSERT"
     UPDATE = "UPDATE"
@@ -18,6 +20,7 @@ class QueryType(Enum):
 
 class InvalidationStrategy(Enum):
     """Cache invalidation strategies."""
+
     AGGRESSIVE = "aggressive"  # Invalidate table and all dependencies
     CONSERVATIVE = "conservative"  # Invalidate only affected table
     TARGETED = "targeted"  # Invalidate based on WHERE clause analysis
@@ -26,6 +29,7 @@ class InvalidationStrategy(Enum):
 @dataclass
 class TableDependency:
     """Represents dependencies between tables."""
+
     table: str
     depends_on: list[str] = field(default_factory=list)
 
@@ -33,7 +37,9 @@ class TableDependency:
 class CacheInvalidator:
     """Manages cache invalidation for database operations."""
 
-    def __init__(self, strategy: InvalidationStrategy = InvalidationStrategy.AGGRESSIVE):
+    def __init__(
+        self, strategy: InvalidationStrategy = InvalidationStrategy.AGGRESSIVE
+    ):
         """Initialize cache invalidator.
 
         Args:
@@ -62,7 +68,10 @@ class CacheInvalidator:
             return QueryType.UPDATE
         elif query_upper.startswith("DELETE"):
             return QueryType.DELETE
-        elif any(query_upper.startswith(ddl) for ddl in ["CREATE", "ALTER", "DROP", "TRUNCATE"]):
+        elif any(
+            query_upper.startswith(ddl)
+            for ddl in ["CREATE", "ALTER", "DROP", "TRUNCATE"]
+        ):
             return QueryType.DDL
         else:
             return QueryType.OTHER
@@ -82,17 +91,17 @@ class CacheInvalidator:
         # Patterns for different SQL clauses
         patterns = [
             # FROM clause
-            r'\bfrom\s+([a-z_][a-z0-9_]*)',
+            r"\bfrom\s+([a-z_][a-z0-9_]*)",
             # JOIN clauses
-            r'\bjoin\s+([a-z_][a-z0-9_]*)',
+            r"\bjoin\s+([a-z_][a-z0-9_]*)",
             # INTO clause (for INSERT)
-            r'\binto\s+([a-z_][a-z0-9_]*)',
+            r"\binto\s+([a-z_][a-z0-9_]*)",
             # UPDATE clause
-            r'\bupdate\s+([a-z_][a-z0-9_]*)',
+            r"\bupdate\s+([a-z_][a-z0-9_]*)",
             # DELETE FROM clause
-            r'\bdelete\s+from\s+([a-z_][a-z0-9_]*)',
+            r"\bdelete\s+from\s+([a-z_][a-z0-9_]*)",
             # Subqueries (basic support)
-            r'\(\s*select\s+.*?\s+from\s+([a-z_][a-z0-9_]*)',
+            r"\(\s*select\s+.*?\s+from\s+([a-z_][a-z0-9_]*)",
         ]
 
         for pattern in patterns:
@@ -144,7 +153,9 @@ class CacheInvalidator:
         """
         return self._dependencies.get(table, [])
 
-    def get_all_dependencies(self, table: str, visited: set[str] | None = None) -> list[str]:
+    def get_all_dependencies(
+        self, table: str, visited: set[str] | None = None
+    ) -> list[str]:
         """Get all dependencies (including transitive) for a table.
 
         Args:
@@ -190,7 +201,9 @@ class CacheInvalidator:
             return f"{prefix}:*:{table}:*"
         return f"*:{table}:*"
 
-    def generate_patterns(self, tables: list[str], prefix: str | None = None) -> list[str]:
+    def generate_patterns(
+        self, tables: list[str], prefix: str | None = None
+    ) -> list[str]:
         """Generate cache key patterns for multiple tables.
 
         Args:
@@ -207,7 +220,7 @@ class CacheInvalidator:
         query: str,
         cache: CacheInterface,
         database: str | None = None,
-        targeted: bool = False
+        targeted: bool = False,
     ) -> None:
         """Invalidate cache entries based on a write operation.
 
@@ -251,10 +264,7 @@ class CacheInvalidator:
             await cache.delete_pattern(pattern)
 
     async def invalidate_batch(
-        self,
-        queries: list[str],
-        cache: CacheInterface,
-        database: str | None = None
+        self, queries: list[str], cache: CacheInterface, database: str | None = None
     ) -> None:
         """Invalidate cache for a batch of queries.
 
@@ -317,9 +327,6 @@ class CacheInvalidator:
         match = re.search(pattern, query, re.IGNORECASE)
 
         if match:
-            return {
-                "column": match.group(1),
-                "value": match.group(2)
-            }
+            return {"column": match.group(1), "value": match.group(2)}
 
         return None

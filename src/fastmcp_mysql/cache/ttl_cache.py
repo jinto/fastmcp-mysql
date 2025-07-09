@@ -1,4 +1,5 @@
 """TTL-based cache implementation."""
+
 import asyncio
 import contextlib
 import fnmatch
@@ -33,11 +34,7 @@ class TTLCache(CacheInterface):
         # Use OrderedDict for FIFO eviction
         self._storage: OrderedDict[str, CacheEntry] = OrderedDict()
         self._stats = CacheStats(
-            hits=0,
-            misses=0,
-            evictions=0,
-            size=0,
-            max_size=self.max_size
+            hits=0, misses=0, evictions=0, size=0, max_size=self.max_size
         )
 
         # Lock for thread safety
@@ -149,7 +146,7 @@ class TTLCache(CacheInterface):
                 value=value,
                 created_at=datetime.now(),
                 expires_at=expires_at,
-                hit_count=0
+                hit_count=0,
             )
 
             # Store entry
@@ -212,7 +209,7 @@ class TTLCache(CacheInterface):
                 misses=self._stats.misses,
                 evictions=self._stats.evictions,
                 size=len(self._storage),
-                max_size=self.max_size
+                max_size=self.max_size,
             )
 
     async def close(self) -> None:

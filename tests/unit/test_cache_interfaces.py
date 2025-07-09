@@ -1,4 +1,5 @@
 """Unit tests for cache interfaces."""
+
 from datetime import datetime, timedelta
 from typing import Any
 
@@ -25,14 +26,14 @@ class TestCacheInterface:
     @pytest.mark.asyncio
     async def test_cache_interface_has_required_methods(self):
         """Test that CacheInterface has all required abstract methods."""
-        assert hasattr(CacheInterface, 'get')
-        assert hasattr(CacheInterface, 'set')
-        assert hasattr(CacheInterface, 'delete')
-        assert hasattr(CacheInterface, 'delete_pattern')
-        assert hasattr(CacheInterface, 'clear')
-        assert hasattr(CacheInterface, 'exists')
-        assert hasattr(CacheInterface, 'get_stats')
-        assert hasattr(CacheInterface, 'close')
+        assert hasattr(CacheInterface, "get")
+        assert hasattr(CacheInterface, "set")
+        assert hasattr(CacheInterface, "delete")
+        assert hasattr(CacheInterface, "delete_pattern")
+        assert hasattr(CacheInterface, "clear")
+        assert hasattr(CacheInterface, "exists")
+        assert hasattr(CacheInterface, "get_stats")
+        assert hasattr(CacheInterface, "close")
 
 
 class TestCacheEntry:
@@ -47,7 +48,7 @@ class TestCacheEntry:
             value=data,
             created_at=now,
             expires_at=now + timedelta(seconds=60),
-            hit_count=0
+            hit_count=0,
         )
 
         assert entry.key == "test_key"
@@ -63,7 +64,7 @@ class TestCacheEntry:
             value="data",
             created_at=datetime.now() - timedelta(seconds=120),
             expires_at=datetime.now() - timedelta(seconds=60),
-            hit_count=5
+            hit_count=5,
         )
 
         assert entry.is_expired()
@@ -75,7 +76,7 @@ class TestCacheEntry:
             value="data",
             created_at=datetime.now(),
             expires_at=None,  # No expiration
-            hit_count=0
+            hit_count=0,
         )
 
         assert not entry.is_expired()
@@ -86,13 +87,7 @@ class TestCacheStats:
 
     def test_cache_stats_creation(self):
         """Test creating cache statistics."""
-        stats = CacheStats(
-            hits=100,
-            misses=20,
-            evictions=5,
-            size=50,
-            max_size=100
-        )
+        stats = CacheStats(hits=100, misses=20, evictions=5, size=50, max_size=100)
 
         assert stats.hits == 100
         assert stats.misses == 20
@@ -102,37 +97,19 @@ class TestCacheStats:
 
     def test_cache_stats_hit_rate(self):
         """Test cache hit rate calculation."""
-        stats = CacheStats(
-            hits=80,
-            misses=20,
-            evictions=0,
-            size=10,
-            max_size=100
-        )
+        stats = CacheStats(hits=80, misses=20, evictions=0, size=10, max_size=100)
 
         assert stats.hit_rate == 0.8  # 80%
 
     def test_cache_stats_hit_rate_no_requests(self):
         """Test cache hit rate with no requests."""
-        stats = CacheStats(
-            hits=0,
-            misses=0,
-            evictions=0,
-            size=0,
-            max_size=100
-        )
+        stats = CacheStats(hits=0, misses=0, evictions=0, size=0, max_size=100)
 
         assert stats.hit_rate == 0.0
 
     def test_cache_stats_utilization(self):
         """Test cache utilization calculation."""
-        stats = CacheStats(
-            hits=100,
-            misses=20,
-            evictions=5,
-            size=75,
-            max_size=100
-        )
+        stats = CacheStats(hits=100, misses=20, evictions=5, size=75, max_size=100)
 
         assert stats.utilization == 0.75  # 75%
 
@@ -223,10 +200,7 @@ class TestCacheConfig:
     def test_cache_config_custom(self):
         """Test custom cache configuration."""
         config = CacheConfig(
-            enabled=False,
-            ttl=600,
-            max_size=5000,
-            eviction_policy="lfu"
+            enabled=False, ttl=600, max_size=5000, eviction_policy="lfu"
         )
 
         assert not config.enabled
@@ -282,7 +256,7 @@ class MockCache(CacheInterface):
             value=value,
             created_at=datetime.now(),
             expires_at=expires_at,
-            hit_count=0
+            hit_count=0,
         )
         self._stats.size = len(self._storage)
 
@@ -295,7 +269,7 @@ class MockCache(CacheInterface):
 
     async def delete_pattern(self, pattern: str) -> int:
         # Simple pattern matching (just prefix for mock)
-        prefix = pattern.rstrip('*')
+        prefix = pattern.rstrip("*")
         keys_to_delete = [k for k in self._storage if k.startswith(prefix)]
 
         for key in keys_to_delete:

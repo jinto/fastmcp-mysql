@@ -11,7 +11,9 @@ from ..interfaces import QueryFilter
 class BlacklistFilter(QueryFilter):
     """Filter queries based on blacklist patterns."""
 
-    def __init__(self, settings: SecuritySettings = None, additional_patterns: list[str] = None):
+    def __init__(
+        self, settings: SecuritySettings = None, additional_patterns: list[str] = None
+    ):
         """
         Initialize blacklist filter.
 

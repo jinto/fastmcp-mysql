@@ -22,32 +22,60 @@ class TestQueryValidator:
 
         assert validator.get_query_type("SELECT * FROM users") == QueryType.SELECT
         assert validator.get_query_type("select id from posts") == QueryType.SELECT
-        assert validator.get_query_type("  SELECT count(*) FROM orders  ") == QueryType.SELECT
-        assert validator.get_query_type("WITH cte AS (SELECT 1) SELECT * FROM cte") == QueryType.SELECT
+        assert (
+            validator.get_query_type("  SELECT count(*) FROM orders  ")
+            == QueryType.SELECT
+        )
+        assert (
+            validator.get_query_type("WITH cte AS (SELECT 1) SELECT * FROM cte")
+            == QueryType.SELECT
+        )
 
     def test_get_query_type_insert(self):
         """Test identifying INSERT queries."""
         validator = QueryValidator()
 
-        assert validator.get_query_type("INSERT INTO users VALUES (1, 'test')") == QueryType.INSERT
-        assert validator.get_query_type("insert into logs (msg) values ('test')") == QueryType.INSERT
-        assert validator.get_query_type("  INSERT IGNORE INTO data SET id=1  ") == QueryType.INSERT
+        assert (
+            validator.get_query_type("INSERT INTO users VALUES (1, 'test')")
+            == QueryType.INSERT
+        )
+        assert (
+            validator.get_query_type("insert into logs (msg) values ('test')")
+            == QueryType.INSERT
+        )
+        assert (
+            validator.get_query_type("  INSERT IGNORE INTO data SET id=1  ")
+            == QueryType.INSERT
+        )
 
     def test_get_query_type_update(self):
         """Test identifying UPDATE queries."""
         validator = QueryValidator()
 
-        assert validator.get_query_type("UPDATE users SET name='test'") == QueryType.UPDATE
-        assert validator.get_query_type("update posts set title='new' where id=1") == QueryType.UPDATE
-        assert validator.get_query_type("  UPDATE LOW_PRIORITY users SET active=1  ") == QueryType.UPDATE
+        assert (
+            validator.get_query_type("UPDATE users SET name='test'") == QueryType.UPDATE
+        )
+        assert (
+            validator.get_query_type("update posts set title='new' where id=1")
+            == QueryType.UPDATE
+        )
+        assert (
+            validator.get_query_type("  UPDATE LOW_PRIORITY users SET active=1  ")
+            == QueryType.UPDATE
+        )
 
     def test_get_query_type_delete(self):
         """Test identifying DELETE queries."""
         validator = QueryValidator()
 
-        assert validator.get_query_type("DELETE FROM users WHERE id=1") == QueryType.DELETE
+        assert (
+            validator.get_query_type("DELETE FROM users WHERE id=1") == QueryType.DELETE
+        )
         assert validator.get_query_type("delete from logs") == QueryType.DELETE
-        assert validator.get_query_type("  DELETE QUICK FROM temp_data  ") == QueryType.DELETE
+        assert (
+            validator.get_query_type("  DELETE QUICK FROM temp_data  ")
+            == QueryType.DELETE
+        )
 
     def test_get_query_type_ddl(self):
         """Test identifying DDL queries."""
@@ -55,9 +83,15 @@ class TestQueryValidator:
 
         assert validator.get_query_type("CREATE TABLE users (id INT)") == QueryType.DDL
         assert validator.get_query_type("DROP TABLE IF EXISTS temp") == QueryType.DDL
-        assert validator.get_query_type("ALTER TABLE users ADD COLUMN email VARCHAR(255)") == QueryType.DDL
+        assert (
+            validator.get_query_type("ALTER TABLE users ADD COLUMN email VARCHAR(255)")
+            == QueryType.DDL
+        )
         assert validator.get_query_type("TRUNCATE TABLE logs") == QueryType.DDL
-        assert validator.get_query_type("CREATE INDEX idx_name ON users(name)") == QueryType.DDL
+        assert (
+            validator.get_query_type("CREATE INDEX idx_name ON users(name)")
+            == QueryType.DDL
+        )
 
     def test_get_query_type_use(self):
         """Test identifying USE queries."""
@@ -82,7 +116,9 @@ class TestQueryValidator:
 
         assert validator.get_query_type("DESCRIBE users") == QueryType.OTHER
         assert validator.get_query_type("SET @var = 1") == QueryType.OTHER
-        assert validator.get_query_type("EXPLAIN SELECT * FROM users") == QueryType.OTHER
+        assert (
+            validator.get_query_type("EXPLAIN SELECT * FROM users") == QueryType.OTHER
+        )
 
     def test_validate_query_select_allowed(self):
         """Test validating SELECT queries (always allowed)."""
@@ -95,26 +131,28 @@ class TestQueryValidator:
     def test_validate_query_write_operations_denied(self):
         """Test write operations when not allowed."""
         validator = QueryValidator(
-            allow_insert=False,
-            allow_update=False,
-            allow_delete=False
+            allow_insert=False, allow_update=False, allow_delete=False
         )
 
-        with pytest.raises(ValueError, match="INSERT operations require write permission"):
+        with pytest.raises(
+            ValueError, match="INSERT operations require write permission"
+        ):
             validator.validate_query("INSERT INTO users VALUES (1)", allow_write=False)
 
-        with pytest.raises(ValueError, match="UPDATE operations require write permission"):
+        with pytest.raises(
+            ValueError, match="UPDATE operations require write permission"
+        ):
             validator.validate_query("UPDATE users SET name='test'", allow_write=False)
 
-        with pytest.raises(ValueError, match="DELETE operations require write permission"):
+        with pytest.raises(
+            ValueError, match="DELETE operations require write permission"
+        ):
             validator.validate_query("DELETE FROM users", allow_write=False)
 
     def test_validate_query_write_operations_allowed(self):
         """Test write operations when allowed."""
         validator = QueryValidator(
-            allow_insert=True,
-            allow_update=True,
-            allow_delete=True
+            allow_insert=True, allow_update=True, allow_delete=True
         )
 
         # Should not raise when write operations are allowed
@@ -160,25 +198,17 @@ class TestQueryExecutor:
     def executor(self, mock_connection_manager):
         """Create a query executor instance."""
         validator = QueryValidator(
-            allow_insert=True,
-            allow_update=True,
-            allow_delete=True
+            allow_insert=True, allow_update=True, allow_delete=True
         )
         return QueryExecutor(mock_connection_manager, validator)
 
     @pytest.mark.asyncio
     async def test_execute_select_query(self, executor, mock_connection_manager):
         """Test executing a SELECT query."""
-        mock_result = [
-            {"id": 1, "name": "Alice"},
-            {"id": 2, "name": "Bob"}
-        ]
+        mock_result = [{"id": 1, "name": "Alice"}, {"id": 2, "name": "Bob"}]
         mock_connection_manager.execute.return_value = mock_result
 
-        result = await executor.execute(
-            query="SELECT * FROM users",
-            params=None
-        )
+        result = await executor.execute(query="SELECT * FROM users", params=None)
 
         assert result["success"] is True
         assert result["data"] == mock_result
@@ -186,8 +216,7 @@ class TestQueryExecutor:
         assert "error" not in result
 
         mock_connection_manager.execute.assert_called_once_with(
-            "SELECT * FROM users",
-            None
+            "SELECT * FROM users", None
         )
 
     @pytest.mark.asyncio
@@ -196,8 +225,7 @@ class TestQueryExecutor:
         mock_connection_manager.execute.return_value = 1  # 1 row affected
 
         result = await executor.execute(
-            query="INSERT INTO users (name) VALUES (%s)",
-            params=("Charlie",)
+            query="INSERT INTO users (name) VALUES (%s)", params=("Charlie",)
         )
 
         assert result["success"] is True
@@ -208,12 +236,11 @@ class TestQueryExecutor:
     @pytest.mark.asyncio
     async def test_execute_query_with_error(self, executor, mock_connection_manager):
         """Test query execution with database error."""
-        mock_connection_manager.execute.side_effect = Exception("Database connection lost")
-
-        result = await executor.execute(
-            query="SELECT * FROM users",
-            params=None
+        mock_connection_manager.execute.side_effect = Exception(
+            "Database connection lost"
         )
+
+        result = await executor.execute(query="SELECT * FROM users", params=None)
 
         assert result["success"] is False
         assert result["error"] == "Database connection lost"
@@ -223,10 +250,7 @@ class TestQueryExecutor:
     @pytest.mark.asyncio
     async def test_execute_query_validation_error(self, executor):
         """Test query execution with validation error."""
-        result = await executor.execute(
-            query="DROP TABLE users",
-            params=None
-        )
+        result = await executor.execute(query="DROP TABLE users", params=None)
 
         assert result["success"] is False
         assert "DDL operations are not allowed" in result["error"]
@@ -241,11 +265,8 @@ class TestFormatQueryResult:
         """Test formatting SELECT query results."""
         result = {
             "success": True,
-            "data": [
-                {"id": 1, "name": "Alice"},
-                {"id": 2, "name": "Bob"}
-            ],
-            "rows_affected": None
+            "data": [{"id": 1, "name": "Alice"}, {"id": 2, "name": "Bob"}],
+            "rows_affected": None,
         }
 
         formatted = format_query_result(result)
@@ -258,11 +279,7 @@ class TestFormatQueryResult:
 
     def test_format_write_result(self):
         """Test formatting write query results."""
-        result = {
-            "success": True,
-            "data": None,
-            "rows_affected": 3
-        }
+        result = {"success": True, "data": None, "rows_affected": 3}
 
         formatted = format_query_result(result)
 
@@ -278,7 +295,7 @@ class TestFormatQueryResult:
             "success": False,
             "error": "Table not found",
             "data": None,
-            "rows_affected": None
+            "rows_affected": None,
         }
 
         formatted = format_query_result(result)
@@ -299,13 +316,10 @@ class TestMySQLQueryTool:
             mock_conn_manager = AsyncMock()
             mock_get_conn.return_value = mock_conn_manager
 
-            mock_conn_manager.execute.return_value = [
-                {"id": 1, "name": "Test"}
-            ]
+            mock_conn_manager.execute.return_value = [{"id": 1, "name": "Test"}]
 
             result = await mysql_query(
-                query="SELECT * FROM users WHERE id = %s",
-                params=[1]
+                query="SELECT * FROM users WHERE id = %s", params=[1]
             )
 
             assert result["success"] is True
@@ -321,10 +335,7 @@ class TestMySQLQueryTool:
 
             mock_conn_manager.execute.return_value = []
 
-            await mysql_query(
-                query="SELECT * FROM products",
-                database="shop_db"
-            )
+            await mysql_query(query="SELECT * FROM products", database="shop_db")
 
             # Should prefix table with database name
             mock_conn_manager.execute.assert_called_once()
@@ -344,13 +355,13 @@ class TestMySQLQueryTool:
             # Temporarily disable security
             set_security_manager(None)
 
-            with patch("fastmcp_mysql.tools.query.get_connection_manager") as mock_get_conn:
+            with patch(
+                "fastmcp_mysql.tools.query.get_connection_manager"
+            ) as mock_get_conn:
                 mock_conn_manager = AsyncMock()
                 mock_get_conn.return_value = mock_conn_manager
 
-                result = await mysql_query(
-                    query="DROP TABLE users"
-                )
+                result = await mysql_query(query="DROP TABLE users")
 
                 assert result["success"] is False
                 assert "DDL operations are not allowed" in result["error"]
@@ -365,9 +376,7 @@ class TestMySQLQueryTool:
         with patch("fastmcp_mysql.tools.query.get_connection_manager") as mock_get_conn:
             mock_get_conn.return_value = None
 
-            result = await mysql_query(
-                query="SELECT * FROM users"
-            )
+            result = await mysql_query(query="SELECT * FROM users")
 
             assert result["success"] is False
             assert "Connection not initialized" in result["error"]

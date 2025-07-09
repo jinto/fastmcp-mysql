@@ -18,6 +18,7 @@ logger = logging.getLogger(__name__)
 @dataclass
 class SecurityContext:
     """Security context containing request information."""
+
     user_id: str | None = None
     ip_address: str | None = None
     session_id: str | None = None
@@ -37,7 +38,7 @@ class SecurityManager:
         settings: SecuritySettings,
         query_filter: QueryFilter | None = None,
         rate_limiter: RateLimiter | None = None,
-        injection_detector: InjectionDetector | None = None
+        injection_detector: InjectionDetector | None = None,
     ):
         """
         Initialize security manager.
@@ -58,7 +59,7 @@ class SecurityManager:
         self,
         query: str,
         params: tuple | None = None,
-        context: SecurityContext | None = None
+        context: SecurityContext | None = None,
     ) -> None:
         """
         Validate a query against all security rules.
@@ -75,7 +76,9 @@ class SecurityManager:
 
         # 1. Check query length
         if len(query) > self.settings.max_query_length:
-            raise SecurityError(f"Query too long: {len(query)} > {self.settings.max_query_length}")
+            raise SecurityError(
+                f"Query too long: {len(query)} > {self.settings.max_query_length}"
+            )
 
         # 2. Rate limiting
         if self.settings.enable_rate_limiting and self.rate_limiter:
@@ -89,11 +92,14 @@ class SecurityManager:
         if self.settings.enable_injection_detection and self.injection_detector:
             threats = self.injection_detector.detect(query, params)
             if threats:
-                self._log_security_event("injection_detected", {
-                    "query": query[:200],  # Truncate for logging
-                    "threats": threats,
-                    "user": context.identifier
-                })
+                self._log_security_event(
+                    "injection_detected",
+                    {
+                        "query": query[:200],  # Truncate for logging
+                        "threats": threats,
+                        "user": context.identifier,
+                    },
+                )
                 raise InjectionError(
                     f"Potential SQL injection detected: {', '.join(threats)}"
                 )
@@ -102,10 +108,10 @@ class SecurityManager:
             if params:
                 param_threats = self.injection_detector.validate_parameters(params)
                 if param_threats:
-                    self._log_security_event("injection_in_params", {
-                        "threats": param_threats,
-                        "user": context.identifier
-                    })
+                    self._log_security_event(
+                        "injection_in_params",
+                        {"threats": param_threats, "user": context.identifier},
+                    )
                     raise InjectionError(
                         f"Suspicious parameters detected: {', '.join(param_threats)}"
                     )
@@ -115,20 +121,22 @@ class SecurityManager:
             try:
                 self.query_filter.validate(query)
             except FilteredQueryError as e:
-                self._log_security_event("query_filtered", {
-                    "query": query[:200],
-                    "reason": str(e),
-                    "filter": self.query_filter.__class__.__name__,
-                    "user": context.identifier
-                })
+                self._log_security_event(
+                    "query_filtered",
+                    {
+                        "query": query[:200],
+                        "reason": str(e),
+                        "filter": self.query_filter.__class__.__name__,
+                        "user": context.identifier,
+                    },
+                )
                 raise
 
         # 6. Audit logging
         if self.settings.audit_all_queries:
-            self._log_security_event("query_executed", {
-                "query": query[:200],
-                "user": context.identifier
-            })
+            self._log_security_event(
+                "query_executed", {"query": query[:200], "user": context.identifier}
+            )
 
     def _log_security_event(self, event_type: str, details: dict) -> None:
         """Log a security event."""
@@ -137,8 +145,5 @@ class SecurityManager:
 
         logger.warning(
             f"Security event: {event_type}",
-            extra={
-                "event_type": event_type,
-                "details": details
-            }
+            extra={"event_type": event_type, "details": details},
         )

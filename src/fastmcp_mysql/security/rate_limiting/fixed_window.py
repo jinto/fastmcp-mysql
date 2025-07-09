@@ -10,6 +10,7 @@ from ..interfaces import RateLimiter
 @dataclass
 class WindowCounter:
     """Counter for fixed window."""
+
     count: int
     window_start: float
 

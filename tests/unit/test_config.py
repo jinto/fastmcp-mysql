@@ -25,10 +25,9 @@ class TestSettings:
 
     def test_default_values(self):
         """Test default values are set correctly."""
-        with patch.dict(os.environ, {
-            "MYSQL_USER": "testuser",
-            "MYSQL_PASSWORD": "testpass"
-        }):
+        with patch.dict(
+            os.environ, {"MYSQL_USER": "testuser", "MYSQL_PASSWORD": "testpass"}
+        ):
             settings = Settings(_env_file=None)
 
             # Connection defaults
@@ -63,7 +62,7 @@ class TestSettings:
             "MYSQL_POOL_SIZE": "20",
             "MYSQL_QUERY_TIMEOUT": "60000",
             "MYSQL_CACHE_TTL": "120000",
-            "MYSQL_LOG_LEVEL": "DEBUG"
+            "MYSQL_LOG_LEVEL": "DEBUG",
         }
 
         with patch.dict(os.environ, env_vars):
@@ -88,7 +87,7 @@ class TestSettings:
             "MYSQL_USER": "testuser",
             "MYSQL_PASSWORD": "testpass",
             "MYSQL_DB": "testdb",
-            "MYSQL_PORT": "invalid"
+            "MYSQL_PORT": "invalid",
         }
 
         with patch.dict(os.environ, env_vars):
@@ -104,7 +103,7 @@ class TestSettings:
             "MYSQL_USER": "testuser",
             "MYSQL_PASSWORD": "testpass",
             "MYSQL_DB": "testdb",
-            "MYSQL_POOL_SIZE": "0"
+            "MYSQL_POOL_SIZE": "0",
         }
 
         with patch.dict(os.environ, env_vars):
@@ -120,7 +119,7 @@ class TestSettings:
             "MYSQL_USER": "testuser",
             "MYSQL_PASSWORD": "testpass",
             "MYSQL_DB": "testdb",
-            "MYSQL_LOG_LEVEL": "INVALID"
+            "MYSQL_LOG_LEVEL": "INVALID",
         }
 
         with patch.dict(os.environ, env_vars):
@@ -133,21 +132,23 @@ class TestSettings:
     def test_connection_string_property(self):
         """Test the connection string property."""
         # Test with DB
-        with patch.dict(os.environ, {
-            "MYSQL_USER": "testuser",
-            "MYSQL_PASSWORD": "testpass",
-            "MYSQL_DB": "testdb"
-        }):
+        with patch.dict(
+            os.environ,
+            {
+                "MYSQL_USER": "testuser",
+                "MYSQL_PASSWORD": "testpass",
+                "MYSQL_DB": "testdb",
+            },
+        ):
             settings = Settings(_env_file=None)
 
             expected = "mysql://testuser:***@127.0.0.1:3306/testdb"
             assert settings.connection_string_safe == expected
 
         # Test without DB
-        with patch.dict(os.environ, {
-            "MYSQL_USER": "testuser",
-            "MYSQL_PASSWORD": "testpass"
-        }):
+        with patch.dict(
+            os.environ, {"MYSQL_USER": "testuser", "MYSQL_PASSWORD": "testpass"}
+        ):
             settings = Settings(_env_file=None)
 
             expected = "mysql://testuser:***@127.0.0.1:3306/"
@@ -155,11 +156,14 @@ class TestSettings:
 
     def test_to_dict_masks_password(self):
         """Test that to_dict masks sensitive information."""
-        with patch.dict(os.environ, {
-            "MYSQL_USER": "testuser",
-            "MYSQL_PASSWORD": "supersecret",
-            "MYSQL_DB": "testdb"
-        }):
+        with patch.dict(
+            os.environ,
+            {
+                "MYSQL_USER": "testuser",
+                "MYSQL_PASSWORD": "supersecret",
+                "MYSQL_DB": "testdb",
+            },
+        ):
             settings = Settings(_env_file=None)
             settings_dict = settings.to_dict_safe()
 

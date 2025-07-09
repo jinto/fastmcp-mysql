@@ -16,6 +16,7 @@ try:
     from opentelemetry.sdk.trace import TracerProvider
     from opentelemetry.sdk.trace.export import BatchSpanProcessor
     from opentelemetry.trace import Status, StatusCode
+
     OPENTELEMETRY_AVAILABLE = True
 except ImportError:
     OPENTELEMETRY_AVAILABLE = False
@@ -24,6 +25,7 @@ except ImportError:
 
 class SpanKind(Enum):
     """Types of spans."""
+
     INTERNAL = "internal"
     SERVER = "server"
     CLIENT = "client"
@@ -34,6 +36,7 @@ class SpanKind(Enum):
 @dataclass
 class SpanContext:
     """Context for a tracing span."""
+
     trace_id: str = field(default_factory=lambda: uuid.uuid4().hex)
     span_id: str = field(default_factory=lambda: uuid.uuid4().hex[:16])
     parent_span_id: str | None = None
@@ -47,11 +50,13 @@ class SpanContext:
 
     def add_event(self, name: str, attributes: dict[str, Any] | None = None):
         """Add an event to the span."""
-        self.events.append({
-            "timestamp": time.time(),
-            "name": name,
-            "attributes": attributes or {},
-        })
+        self.events.append(
+            {
+                "timestamp": time.time(),
+                "name": name,
+                "attributes": attributes or {},
+            }
+        )
 
     def set_attribute(self, key: str, value: Any):
         """Set a span attribute."""
@@ -80,8 +85,14 @@ class SpanContext:
             "span_id": self.span_id,
             "parent_span_id": self.parent_span_id,
             "operation_name": self.operation_name,
-            "start_time": datetime.fromtimestamp(self.start_time, timezone.utc).isoformat(),
-            "end_time": datetime.fromtimestamp(self.end_time, timezone.utc).isoformat() if self.end_time else None,
+            "start_time": datetime.fromtimestamp(
+                self.start_time, timezone.utc
+            ).isoformat(),
+            "end_time": (
+                datetime.fromtimestamp(self.end_time, timezone.utc).isoformat()
+                if self.end_time
+                else None
+            ),
             "duration_ms": self.duration_ms(),
             "attributes": self.attributes,
             "events": self.events,
@@ -93,9 +104,12 @@ class SpanContext:
 class TracingManager:
     """Manager for distributed tracing."""
 
-    def __init__(self, service_name: str = "fastmcp-mysql",
-                 otlp_endpoint: str | None = None,
-                 enabled: bool = True):
+    def __init__(
+        self,
+        service_name: str = "fastmcp-mysql",
+        otlp_endpoint: str | None = None,
+        enabled: bool = True,
+    ):
         """Initialize tracing manager.
 
         Args:
@@ -118,10 +132,12 @@ class TracingManager:
             return
 
         # Create resource
-        resource = Resource.create({
-            "service.name": self.service_name,
-            "service.version": "1.0.0",
-        })
+        resource = Resource.create(
+            {
+                "service.name": self.service_name,
+                "service.version": "1.0.0",
+            }
+        )
 
         # Create tracer provider
         provider = TracerProvider(resource=resource)
@@ -139,8 +155,12 @@ class TracingManager:
         self.tracer = trace.get_tracer(self.service_name)
 
     @asynccontextmanager
-    async def span(self, operation_name: str, kind: SpanKind = SpanKind.INTERNAL,
-                   attributes: dict[str, Any] | None = None) -> AsyncIterator[SpanContext]:
+    async def span(
+        self,
+        operation_name: str,
+        kind: SpanKind = SpanKind.INTERNAL,
+        attributes: dict[str, Any] | None = None,
+    ) -> AsyncIterator[SpanContext]:
         """Create a new span.
 
         Args:
@@ -169,7 +189,7 @@ class TracingManager:
         if self.tracer:
             otel_span = self.tracer.start_span(
                 operation_name,
-                kind=getattr(trace.SpanKind, kind.name, trace.SpanKind.INTERNAL)
+                kind=getattr(trace.SpanKind, kind.name, trace.SpanKind.INTERNAL),
             )
             if attributes:
                 for key, value in attributes.items():
@@ -228,20 +248,26 @@ class TracingManager:
 
 # Decorators for common tracing scenarios
 
+
 def trace_query(func):
     """Decorator to trace query execution."""
+
     async def wrapper(*args, **kwargs):
         manager = get_tracing_manager()
         if not manager:
             return await func(*args, **kwargs)
 
         # Extract query info
-        query = args[0] if args else kwargs.get('query', 'unknown')
+        query = args[0] if args else kwargs.get("query", "unknown")
 
-        async with manager.span("query_execution", SpanKind.CLIENT, {
-            "db.statement": query[:200],  # Truncate long queries
-            "db.type": "mysql",
-        }) as span:
+        async with manager.span(
+            "query_execution",
+            SpanKind.CLIENT,
+            {
+                "db.statement": query[:200],  # Truncate long queries
+                "db.type": "mysql",
+            },
+        ) as span:
             start_time = time.time()
             try:
                 result = await func(*args, **kwargs)
@@ -259,15 +285,20 @@ def trace_query(func):
 
 def trace_connection(func):
     """Decorator to trace connection operations."""
+
     async def wrapper(*args, **kwargs):
         manager = get_tracing_manager()
         if not manager:
             return await func(*args, **kwargs)
 
-        async with manager.span("connection_operation", SpanKind.CLIENT, {
-            "db.type": "mysql",
-            "operation": func.__name__,
-        }) as span:
+        async with manager.span(
+            "connection_operation",
+            SpanKind.CLIENT,
+            {
+                "db.type": "mysql",
+                "operation": func.__name__,
+            },
+        ) as span:
             try:
                 result = await func(*args, **kwargs)
                 return result
@@ -282,9 +313,11 @@ def trace_connection(func):
 _tracing_manager: TracingManager | None = None
 
 
-def setup_tracing(service_name: str = "fastmcp-mysql",
-                 otlp_endpoint: str | None = None,
-                 enabled: bool = True) -> TracingManager:
+def setup_tracing(
+    service_name: str = "fastmcp-mysql",
+    otlp_endpoint: str | None = None,
+    enabled: bool = True,
+) -> TracingManager:
     """Set up global tracing manager.
 
     Args:

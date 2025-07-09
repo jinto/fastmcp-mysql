@@ -36,10 +36,7 @@ class SecurityManager(Protocol):
     """Main security manager interface."""
 
     async def validate_request(
-        self,
-        query: str,
-        params: list | None = None,
-        client_id: str | None = None
+        self, query: str, params: list | None = None, client_id: str | None = None
     ) -> tuple[bool, str]:
         """Validate request through all security layers."""
         ...
@@ -50,13 +47,14 @@ class TestSecurityArchitecture:
 
     def test_security_manager_interface(self):
         """Test that SecurityManager properly coordinates all security components."""
+
         # This test defines the expected interface
         class MockSecurityManager:
             def __init__(
                 self,
                 sql_injection: SqlInjectionPrevention,
                 query_filter: QueryFilter,
-                rate_limiter: RateLimiter
+                rate_limiter: RateLimiter,
             ):
                 self.sql_injection = sql_injection
                 self.query_filter = query_filter
@@ -66,11 +64,13 @@ class TestSecurityArchitecture:
                 self,
                 query: str,
                 params: list | None = None,
-                client_id: str | None = None
+                client_id: str | None = None,
             ) -> tuple[bool, str]:
                 # 1. Check rate limit first (fail fast)
                 if client_id:
-                    allowed, reason = await self.rate_limiter.check_rate_limit(client_id)
+                    allowed, reason = await self.rate_limiter.check_rate_limit(
+                        client_id
+                    )
                     if not allowed:
                         return False, f"Rate limit exceeded: {reason}"
 
@@ -116,7 +116,7 @@ class TestSecurityArchitecture:
                 "log_blocked": True,
                 "log_errors": True,
                 "include_parameters": False,
-            }
+            },
         }
 
         # This structure should be used for configuration
@@ -128,7 +128,9 @@ class TestSecurityArchitecture:
 
         # Each middleware should have consistent interface
         class SecurityMiddleware:
-            async def process(self, request: dict[str, Any], next_handler) -> dict[str, Any]:
+            async def process(
+                self, request: dict[str, Any], next_handler
+            ) -> dict[str, Any]:
                 # Pre-processing
                 # ...
 
@@ -142,22 +144,27 @@ class TestSecurityArchitecture:
 
     def test_security_error_types(self):
         """Test security-specific error types."""
+
         # Define expected error hierarchy
         class SecurityError(Exception):
             """Base security error."""
+
             pass
 
         class SqlInjectionError(SecurityError):
             """SQL injection detected."""
+
             pass
 
         class RateLimitError(SecurityError):
             """Rate limit exceeded."""
+
             def __init__(self, retry_after: int):
                 self.retry_after = retry_after
 
         class QueryFilterError(SecurityError):
             """Query blocked by filter."""
+
             def __init__(self, filter_type: str, pattern: str):
                 self.filter_type = filter_type
                 self.pattern = pattern
@@ -168,6 +175,7 @@ class TestSecurityArchitecture:
 
     def test_security_context(self):
         """Test security context for request tracking."""
+
         class SecurityContext:
             """Security context for a request."""
 
@@ -187,12 +195,14 @@ class TestSecurityArchitecture:
 
             def add_check(self, check_name: str, passed: bool, reason: str = ""):
                 """Record security check result."""
-                self.security_checks.append({
-                    "check": check_name,
-                    "passed": passed,
-                    "reason": reason,
-                    "timestamp": "..."
-                })
+                self.security_checks.append(
+                    {
+                        "check": check_name,
+                        "passed": passed,
+                        "reason": reason,
+                        "timestamp": "...",
+                    }
+                )
 
         # Test context usage
         ctx = SecurityContext("req-123", client_id="client-1")
@@ -204,6 +214,7 @@ class TestSecurityArchitecture:
 
     def test_security_metrics_interface(self):
         """Test security metrics collection interface."""
+
         class SecurityMetrics:
             """Interface for security metrics."""
 
@@ -227,6 +238,7 @@ class TestSecurityArchitecture:
 
     def test_security_plugin_system(self):
         """Test extensible security plugin system."""
+
         class SecurityPlugin:
             """Base class for security plugins."""
 
@@ -255,6 +267,7 @@ class TestSecurityArchitecture:
 
     def test_security_testing_utilities(self):
         """Test utilities for security testing."""
+
         class SecurityTestUtils:
             """Utilities for testing security features."""
 
@@ -280,8 +293,7 @@ class TestSecurityArchitecture:
 
             @staticmethod
             async def simulate_attack(
-                security_manager: SecurityManager,
-                attack_type: str = "sql_injection"
+                security_manager: SecurityManager, attack_type: str = "sql_injection"
             ) -> dict[str, Any]:
                 """Simulate various attack scenarios."""
                 # Implementation would simulate attacks and return results

@@ -1,4 +1,5 @@
 """Unit tests for TTL-based cache implementation."""
+
 import asyncio
 
 import pytest
@@ -176,13 +177,13 @@ class TestTTLCache:
         # Get hits and misses
         assert await cache.get("key1") == "value1"  # Hit
         assert await cache.get("key1") == "value1"  # Hit
-        assert await cache.get("key3") is None      # Miss
+        assert await cache.get("key3") is None  # Miss
 
         stats = await cache.get_stats()
         assert stats.hits == 2
         assert stats.misses == 1
         assert stats.size == 2
-        assert stats.hit_rate == 2/3
+        assert stats.hit_rate == 2 / 3
 
         await cache.close()
 

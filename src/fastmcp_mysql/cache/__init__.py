@@ -1,4 +1,5 @@
 """Cache module for FastMCP MySQL Server."""
+
 from .interfaces import (
     CacheConfig,
     CacheEntry,
@@ -28,5 +29,5 @@ __all__ = [
     "InvalidationStrategy",
     "QueryType",
     "TableDependency",
-    "CacheManager"
+    "CacheManager",
 ]

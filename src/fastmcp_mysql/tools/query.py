@@ -44,6 +44,7 @@ def get_security_manager() -> SecurityManager | None:
 
 class QueryType(Enum):
     """Types of SQL queries."""
+
     SELECT = "SELECT"
     INSERT = "INSERT"
     UPDATE = "UPDATE"
@@ -76,20 +77,21 @@ class QueryValidator:
 
         # Patterns for detecting query types
         self.patterns = {
-            QueryType.SELECT: re.compile(r'^\s*(WITH\s+.*?\s+)?SELECT\s+', re.IGNORECASE),
-            QueryType.INSERT: re.compile(r'^\s*INSERT\s+', re.IGNORECASE),
-            QueryType.UPDATE: re.compile(r'^\s*UPDATE\s+', re.IGNORECASE),
-            QueryType.DELETE: re.compile(r'^\s*DELETE\s+', re.IGNORECASE),
-            QueryType.DDL: re.compile(
-                r'^\s*(CREATE|DROP|ALTER|TRUNCATE|RENAME)\s+',
-                re.IGNORECASE
+            QueryType.SELECT: re.compile(
+                r"^\s*(WITH\s+.*?\s+)?SELECT\s+", re.IGNORECASE
             ),
-            QueryType.USE: re.compile(r'^\s*USE\s+', re.IGNORECASE),
-            QueryType.SHOW: re.compile(r'^\s*SHOW\s+', re.IGNORECASE),
+            QueryType.INSERT: re.compile(r"^\s*INSERT\s+", re.IGNORECASE),
+            QueryType.UPDATE: re.compile(r"^\s*UPDATE\s+", re.IGNORECASE),
+            QueryType.DELETE: re.compile(r"^\s*DELETE\s+", re.IGNORECASE),
+            QueryType.DDL: re.compile(
+                r"^\s*(CREATE|DROP|ALTER|TRUNCATE|RENAME)\s+", re.IGNORECASE
+            ),
+            QueryType.USE: re.compile(r"^\s*USE\s+", re.IGNORECASE),
+            QueryType.SHOW: re.compile(r"^\s*SHOW\s+", re.IGNORECASE),
         }
 
         # Pattern for detecting multiple statements
-        self.multi_statement_pattern = re.compile(r';\s*\S', re.MULTILINE)
+        self.multi_statement_pattern = re.compile(r";\s*\S", re.MULTILINE)
 
     def get_query_type(self, query: str) -> QueryType:
         """Determine the type of SQL query.
@@ -129,7 +131,12 @@ class QueryValidator:
             raise ValueError("DDL operations are not allowed")
 
         # SELECT, USE, SHOW and OTHER queries are always allowed
-        if query_type in (QueryType.SELECT, QueryType.USE, QueryType.SHOW, QueryType.OTHER):
+        if query_type in (
+            QueryType.SELECT,
+            QueryType.USE,
+            QueryType.SHOW,
+            QueryType.OTHER,
+        ):
             return
 
         # Check write permissions
@@ -149,9 +156,7 @@ class QueryExecutor:
     """Executes SQL queries with proper validation and error handling."""
 
     def __init__(
-        self,
-        connection_manager: ConnectionManager,
-        validator: QueryValidator
+        self, connection_manager: ConnectionManager, validator: QueryValidator
     ):
         """Initialize query executor.
 
@@ -167,7 +172,7 @@ class QueryExecutor:
         query: str,
         params: tuple | list[Any] | None = None,
         database: str | None = None,
-        context: SecurityContext | None = None
+        context: SecurityContext | None = None,
     ) -> dict[str, Any]:
         """Execute a SQL query.
 
@@ -207,26 +212,20 @@ class QueryExecutor:
             query_type = self.validator.get_query_type(query)
 
             if query_type == QueryType.SELECT:
-                return {
-                    "success": True,
-                    "data": result,
-                    "rows_affected": None
-                }
+                return {"success": True, "data": result, "rows_affected": None}
             else:
-                return {
-                    "success": True,
-                    "data": None,
-                    "rows_affected": result
-                }
+                return {"success": True, "data": None, "rows_affected": result}
 
         except SecurityError as e:
             # Security errors should be logged differently
-            logger.warning(f"Security validation failed: {e}", extra={"query": query[:100]})
+            logger.warning(
+                f"Security validation failed: {e}", extra={"query": query[:100]}
+            )
             return {
                 "success": False,
                 "error": str(e),
                 "data": None,
-                "rows_affected": None
+                "rows_affected": None,
             }
         except Exception as e:
             logger.error(f"Query execution failed: {e}", extra={"query": query})
@@ -234,7 +233,7 @@ class QueryExecutor:
                 "success": False,
                 "error": str(e),
                 "data": None,
-                "rows_affected": None
+                "rows_affected": None,
             }
 
     def _add_database_prefix(self, query: str, database: str) -> str:
@@ -273,21 +272,23 @@ def format_query_result(result: dict[str, Any]) -> dict[str, Any]:
             # SELECT query result
             formatted["data"] = result["data"]
             formatted["metadata"] = {
-                "row_count": len(result["data"]) if isinstance(result["data"], list) else 0,
-                "query_type": "SELECT"
+                "row_count": (
+                    len(result["data"]) if isinstance(result["data"], list) else 0
+                ),
+                "query_type": "SELECT",
             }
         else:
             # Write query result
             formatted["data"] = None
             formatted["metadata"] = {
                 "rows_affected": result["rows_affected"],
-                "query_type": "WRITE"
+                "query_type": "WRITE",
             }
     else:
         formatted = {
             "success": False,
             "error": result["error"],
-            "message": "Query execution failed"
+            "message": "Query execution failed",
         }
 
     return formatted
@@ -297,7 +298,7 @@ async def mysql_query(
     query: str,
     params: list[Any] | None = None,
     database: str | None = None,
-    context: Context | None = None
+    context: Context | None = None,
 ) -> dict[str, Any]:
     """Execute a MySQL query.
 
@@ -319,12 +320,13 @@ async def mysql_query(
             return {
                 "success": False,
                 "error": "Connection not initialized",
-                "message": "Query execution failed"
+                "message": "Query execution failed",
             }
 
         # Get validator from settings (in a real implementation)
         # For now, use defaults from environment
         import os
+
         validator = QueryValidator(
             allow_insert=os.getenv("MYSQL_ALLOW_INSERT", "false").lower() == "true",
             allow_update=os.getenv("MYSQL_ALLOW_UPDATE", "false").lower() == "true",
@@ -339,15 +341,15 @@ async def mysql_query(
         if get_security_manager():
             # Extract user information from context if available
             user_id = None
-            if context and hasattr(context, 'user_id'):
+            if context and hasattr(context, "user_id"):
                 user_id = context.user_id
-            elif context and hasattr(context, 'session_id'):
+            elif context and hasattr(context, "session_id"):
                 user_id = context.session_id
 
             security_context = SecurityContext(
                 user_id=user_id or "anonymous",
-                ip_address=getattr(context, 'ip_address', None) if context else None,
-                session_id=getattr(context, 'session_id', None) if context else None
+                ip_address=getattr(context, "ip_address", None) if context else None,
+                session_id=getattr(context, "session_id", None) if context else None,
             )
 
         # Execute query
@@ -358,8 +360,4 @@ async def mysql_query(
 
     except Exception as e:
         logger.error(f"Unexpected error in mysql_query: {e}")
-        return {
-            "success": False,
-            "error": str(e),
-            "message": "Query execution failed"
-        }
+        return {"success": False, "error": str(e), "message": "Query execution failed"}

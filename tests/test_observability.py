@@ -31,7 +31,9 @@ class TestEnhancedJSONFormatter:
 
     def test_basic_formatting(self):
         """Test basic log formatting."""
-        formatter = EnhancedJSONFormatter(include_hostname=False, include_process_info=False)
+        formatter = EnhancedJSONFormatter(
+            include_hostname=False, include_process_info=False
+        )
 
         # Create log record
         record = logging.LogRecord(
@@ -42,7 +44,7 @@ class TestEnhancedJSONFormatter:
             msg="Test message",
             args=(),
             exc_info=None,
-            func="test_function"
+            func="test_function",
         )
 
         # Format and parse
@@ -61,7 +63,9 @@ class TestEnhancedJSONFormatter:
         formatter = EnhancedJSONFormatter()
 
         # Use the request_context manager
-        with request_context(request_id="req123", user_id="user456", session_id="session789"):
+        with request_context(
+            request_id="req123", user_id="user456", session_id="session789"
+        ):
             record = logging.LogRecord(
                 name="test",
                 level=logging.INFO,
@@ -69,7 +73,7 @@ class TestEnhancedJSONFormatter:
                 lineno=1,
                 msg="Test",
                 args=(),
-                exc_info=None
+                exc_info=None,
             )
 
             output = formatter.format(record)
@@ -87,6 +91,7 @@ class TestEnhancedJSONFormatter:
             raise ValueError("Test error")
         except ValueError:
             import sys
+
             exc_info = sys.exc_info()
 
         record = logging.LogRecord(
@@ -96,7 +101,7 @@ class TestEnhancedJSONFormatter:
             lineno=1,
             msg="Error occurred",
             args=(),
-            exc_info=exc_info
+            exc_info=exc_info,
         )
 
         output = formatter.format(record)
@@ -143,7 +148,7 @@ class TestMetricsLogger:
             query="SELECT * FROM users",
             duration_ms=123.45,
             rows_affected=10,
-            success=True
+            success=True,
         )
 
         mock_logger.info.assert_called_once()
@@ -179,7 +184,9 @@ class TestQueryMetrics:
         metrics = QueryMetrics()
 
         # Record slow query
-        metrics.record_query("SELECT", 2000.0, True, "SELECT * FROM large_table", threshold_ms=1000)
+        metrics.record_query(
+            "SELECT", 2000.0, True, "SELECT * FROM large_table", threshold_ms=1000
+        )
 
         assert len(metrics.slow_queries) == 1
         assert metrics.slow_queries[0]["duration_ms"] == 2000.0

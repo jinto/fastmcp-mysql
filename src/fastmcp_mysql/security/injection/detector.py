@@ -137,16 +137,21 @@ class SQLInjectionDetector(InjectionDetector):
             threats.extend(param_threats)
 
             # Check for multiple statements
-            if ';' in decoded_param and self._has_multiple_statements(decoded_param):
+            if ";" in decoded_param and self._has_multiple_statements(decoded_param):
                 threats.append("Multiple statements detected")
 
             # Check for hex values that might be SQL
             if HEX_PATTERN.match(param_str):
                 try:
-                    hex_decoded = bytes.fromhex(param_str[2:]).decode('utf-8', errors='ignore')
+                    hex_decoded = bytes.fromhex(param_str[2:]).decode(
+                        "utf-8", errors="ignore"
+                    )
                     # Check if decoded hex contains SQL patterns
                     hex_threats = self._check_injection_patterns(hex_decoded)
-                    if hex_threats or any(keyword in hex_decoded.upper() for keyword in ['SELECT', 'UNION', 'DROP', 'OR', 'AND']):
+                    if hex_threats or any(
+                        keyword in hex_decoded.upper()
+                        for keyword in ["SELECT", "UNION", "DROP", "OR", "AND"]
+                    ):
                         threats.append("Hex-encoded SQL detected")
                 except:
                     pass
@@ -156,7 +161,7 @@ class SQLInjectionDetector(InjectionDetector):
     def _has_proper_placeholders(self, query: str) -> bool:
         """Check if query uses proper parameter placeholders."""
         # Check for %s (MySQL/psycopg2 style) or ? (standard style)
-        return '%s' in query or '?' in query
+        return "%s" in query or "?" in query
 
     def _has_unescaped_quotes(self, query: str) -> bool:
         """Check for unescaped quotes that might indicate injection."""
@@ -186,7 +191,7 @@ class SQLInjectionDetector(InjectionDetector):
 
         # Unicode decode
         with contextlib.suppress(builtins.BaseException):
-            decoded = decoded.encode().decode('unicode_escape')
+            decoded = decoded.encode().decode("unicode_escape")
 
         return decoded
 
@@ -208,7 +213,9 @@ class SQLInjectionDetector(InjectionDetector):
         # Special case: O'Brien should be safe, but admin' OR '1'='1 should not
         if "'" in param:
             # Check if it's followed by SQL keywords
-            if re.search(r"'\s*(OR|AND|UNION|SELECT|INSERT|UPDATE|DELETE)", param, re.IGNORECASE):
+            if re.search(
+                r"'\s*(OR|AND|UNION|SELECT|INSERT|UPDATE|DELETE)", param, re.IGNORECASE
+            ):
                 threats.append("SQL keyword after quote")
 
         return threats
@@ -216,7 +223,9 @@ class SQLInjectionDetector(InjectionDetector):
     def _has_multiple_statements(self, param: str) -> bool:
         """Check if parameter contains multiple SQL statements."""
         # Look for semicolon followed by SQL keywords
-        if re.search(r";\s*(SELECT|INSERT|UPDATE|DELETE|DROP|CREATE|ALTER)", param, re.IGNORECASE):
+        if re.search(
+            r";\s*(SELECT|INSERT|UPDATE|DELETE|DROP|CREATE|ALTER)", param, re.IGNORECASE
+        ):
             return True
 
         # Check with our semicolon pattern

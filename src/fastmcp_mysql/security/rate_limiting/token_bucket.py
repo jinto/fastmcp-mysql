@@ -10,6 +10,7 @@ from ..interfaces import RateLimiter
 @dataclass
 class TokenBucket:
     """Token bucket for rate limiting."""
+
     capacity: int
     tokens: float
     refill_rate: float
@@ -37,7 +38,7 @@ class TokenBucketLimiter(RateLimiter):
         self,
         requests_per_minute: int,
         burst_size: int,
-        per_user_limits: dict[str, int] | None = None
+        per_user_limits: dict[str, int] | None = None,
     ):
         """
         Initialize token bucket limiter.
@@ -70,7 +71,7 @@ class TokenBucketLimiter(RateLimiter):
                 capacity=burst,
                 tokens=burst,
                 refill_rate=refill_rate,
-                last_refill=time.time()
+                last_refill=time.time(),
             )
         return self.buckets[identifier]
 

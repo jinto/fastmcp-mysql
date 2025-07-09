@@ -9,5 +9,5 @@ __all__ = [
     "TokenBucketLimiter",
     "SlidingWindowLimiter",
     "FixedWindowLimiter",
-    "create_rate_limiter"
+    "create_rate_limiter",
 ]

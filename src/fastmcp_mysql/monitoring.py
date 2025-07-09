@@ -1,4 +1,5 @@
 """Monitoring and observability system for FastMCP MySQL Server."""
+
 import json
 import logging
 import time
@@ -14,6 +15,7 @@ import numpy as np
 
 class HealthStatus(Enum):
     """Health status levels."""
+
     HEALTHY = "healthy"
     DEGRADED = "degraded"
     UNHEALTHY = "unhealthy"
@@ -42,11 +44,9 @@ class QueryMetrics:
 
         # Track slow queries
         if duration > self.slow_query_threshold and query:
-            self.slow_queries.append({
-                "query": query,
-                "duration": duration,
-                "timestamp": datetime.now()
-            })
+            self.slow_queries.append(
+                {"query": query, "duration": duration, "timestamp": datetime.now()}
+            )
             # Keep only last 100 slow queries
             if len(self.slow_queries) > 100:
                 self.slow_queries = self.slow_queries[-100:]
@@ -62,18 +62,18 @@ class QueryMetrics:
             "p50": float(np.percentile(times, 50)),
             "p90": float(np.percentile(times, 90)),
             "p95": float(np.percentile(times, 95)),
-            "p99": float(np.percentile(times, 99))
+            "p99": float(np.percentile(times, 99)),
         }
 
     def get_stats(self) -> dict[str, Any]:
         """Get query statistics."""
         success_rate = (
             self.successful_queries / self.total_queries
-            if self.total_queries > 0 else 0
+            if self.total_queries > 0
+            else 0
         )
         avg_time = (
-            sum(self.query_times) / len(self.query_times)
-            if self.query_times else 0
+            sum(self.query_times) / len(self.query_times) if self.query_times else 0
         )
 
         return {
@@ -83,7 +83,7 @@ class QueryMetrics:
             "success_rate": success_rate,
             "average_time": avg_time,
             "percentiles": self.get_percentiles() if self.query_times else {},
-            "slow_queries": len(self.slow_queries)
+            "slow_queries": len(self.slow_queries),
         }
 
 
@@ -119,12 +119,10 @@ class ConnectionPoolMetrics:
         """Get pool statistics."""
         utilization = (
             (self.active_connections + self.idle_connections) / self.max_size
-            if self.max_size > 0 else 0
+            if self.max_size > 0
+            else 0
         )
-        avg_wait = (
-            sum(self.wait_times) / len(self.wait_times)
-            if self.wait_times else 0
-        )
+        avg_wait = sum(self.wait_times) / len(self.wait_times) if self.wait_times else 0
 
         return {
             "max_size": self.max_size,
@@ -133,7 +131,7 @@ class ConnectionPoolMetrics:
             "utilization": utilization,
             "total_acquired": self.total_acquired,
             "total_released": self.total_released,
-            "average_wait_time": avg_wait
+            "average_wait_time": avg_wait,
         }
 
 
@@ -172,7 +170,7 @@ class CacheMetrics:
             "misses": self.misses,
             "hit_rate": hit_rate,
             "evictions": self.evictions,
-            "size": self.size
+            "size": self.size,
         }
 
 
@@ -186,11 +184,9 @@ class ErrorMetrics:
     def record_error(self, error_type: str, message: str):
         """Record an error occurrence."""
         self.errors_by_type[error_type] += 1
-        self.error_timeline.append({
-            "timestamp": datetime.now(),
-            "type": error_type,
-            "message": message
-        })
+        self.error_timeline.append(
+            {"timestamp": datetime.now(), "type": error_type, "message": message}
+        )
         # Keep only last 1000 errors
         if len(self.error_timeline) > 1000:
             self.error_timeline = self.error_timeline[-1000:]
@@ -198,10 +194,7 @@ class ErrorMetrics:
     def get_error_rate(self, window_minutes: int = 60) -> float:
         """Get error rate per hour."""
         cutoff = datetime.now() - timedelta(minutes=window_minutes)
-        recent_errors = [
-            e for e in self.error_timeline
-            if e["timestamp"] > cutoff
-        ]
+        recent_errors = [e for e in self.error_timeline if e["timestamp"] > cutoff]
         return len(recent_errors)
 
     def get_stats(self) -> dict[str, Any]:
@@ -210,7 +203,7 @@ class ErrorMetrics:
             "total_errors": sum(self.errors_by_type.values()),
             "errors_by_type": dict(self.errors_by_type),
             "error_rate_per_hour": self.get_error_rate(),
-            "recent_errors": len(self.error_timeline)
+            "recent_errors": len(self.error_timeline),
         }
 
 
@@ -232,7 +225,9 @@ class HealthChecker:
         """Register a health check."""
         self._checks[name] = check_func
 
-    async def check_database(self, pool_metrics: ConnectionPoolMetrics) -> dict[str, Any]:
+    async def check_database(
+        self, pool_metrics: ConnectionPoolMetrics
+    ) -> dict[str, Any]:
         """Check database connectivity and pool health."""
         stats = pool_metrics.get_stats()
 
@@ -257,11 +252,13 @@ class HealthChecker:
             "message": message,
             "details": {
                 "connections": f"{active}/{max_size}",
-                "utilization": f"{utilization*100:.1f}%"
-            }
+                "utilization": f"{utilization*100:.1f}%",
+            },
         }
 
-    async def check_query_performance(self, query_metrics: QueryMetrics) -> dict[str, Any]:
+    async def check_query_performance(
+        self, query_metrics: QueryMetrics
+    ) -> dict[str, Any]:
         """Check query performance health."""
         stats = query_metrics.get_stats()
 
@@ -280,8 +277,8 @@ class HealthChecker:
             "message": message,
             "details": {
                 "success_rate": f"{stats['success_rate']*100:.1f}%",
-                "p95_latency": f"{stats.get('percentiles', {}).get('p95', 0)*1000:.0f}ms"
-            }
+                "p95_latency": f"{stats.get('percentiles', {}).get('p95', 0)*1000:.0f}ms",
+            },
         }
 
     async def check_cache(self, cache_metrics: CacheMetrics) -> dict[str, Any]:
@@ -300,8 +297,8 @@ class HealthChecker:
             "message": message,
             "details": {
                 "hit_rate": f"{stats['hit_rate']*100:.1f}%",
-                "size": stats["size"]
-            }
+                "size": stats["size"],
+            },
         }
 
     async def check_errors(self, error_metrics: ErrorMetrics) -> dict[str, Any]:
@@ -324,8 +321,8 @@ class HealthChecker:
             "message": message,
             "details": {
                 "error_rate": f"{error_rate:.0f}/hour",
-                "total_errors": stats["total_errors"]
-            }
+                "total_errors": stats["total_errors"],
+            },
         }
 
     async def check_health(
@@ -333,7 +330,7 @@ class HealthChecker:
         query_metrics: QueryMetrics | None = None,
         pool_metrics: ConnectionPoolMetrics | None = None,
         cache_metrics: CacheMetrics | None = None,
-        error_metrics: ErrorMetrics | None = None
+        error_metrics: ErrorMetrics | None = None,
     ) -> dict[str, Any]:
         """Run all health checks."""
         overall_status = HealthStatus.HEALTHY
@@ -370,19 +367,22 @@ class HealthChecker:
                 try:
                     result = await check_func()
                     checks[name] = result
-                    if result.get("status", HealthStatus.HEALTHY).value > overall_status.value:
+                    if (
+                        result.get("status", HealthStatus.HEALTHY).value
+                        > overall_status.value
+                    ):
                         overall_status = result["status"]
                 except Exception as e:
                     checks[name] = {
                         "status": HealthStatus.UNHEALTHY,
-                        "message": f"Check failed: {str(e)}"
+                        "message": f"Check failed: {str(e)}",
                     }
                     overall_status = HealthStatus.UNHEALTHY
 
         return {
             "status": overall_status.value,
             "timestamp": datetime.now().isoformat(),
-            "checks": checks
+            "checks": checks,
         }
 
 
@@ -406,7 +406,7 @@ class MetricsCollector:
             "queries": self.query_metrics.get_stats(),
             "connection_pool": self.pool_metrics.get_stats(),
             "cache": self.cache_metrics.get_stats(),
-            "errors": self.error_metrics.get_stats()
+            "errors": self.error_metrics.get_stats(),
         }
 
     def export_prometheus(self) -> str:
@@ -431,15 +431,21 @@ class MetricsCollector:
         # Query latency percentiles
         if query_stats.get("percentiles"):
             for percentile, value in query_stats["percentiles"].items():
-                lines.append(f"# HELP mysql_query_duration_seconds Query duration {percentile}")
+                lines.append(
+                    f"# HELP mysql_query_duration_seconds Query duration {percentile}"
+                )
                 lines.append("# TYPE mysql_query_duration_seconds gauge")
-                lines.append(f"mysql_query_duration_seconds{{quantile=\"{percentile[1:]}\"}} {value}")
+                lines.append(
+                    f'mysql_query_duration_seconds{{quantile="{percentile[1:]}"}} {value}'
+                )
 
         # Connection pool metrics
         pool_stats = metrics["connection_pool"]
         lines.append("# HELP mysql_pool_connections_active Active connections")
         lines.append("# TYPE mysql_pool_connections_active gauge")
-        lines.append(f"mysql_pool_connections_active {pool_stats['active_connections']}")
+        lines.append(
+            f"mysql_pool_connections_active {pool_stats['active_connections']}"
+        )
 
         lines.append("# HELP mysql_pool_utilization Pool utilization ratio")
         lines.append("# TYPE mysql_pool_utilization gauge")
@@ -490,10 +496,10 @@ class EnhancedJSONFormatter(logging.Formatter):
             "location": {
                 "file": record.pathname,
                 "line": record.lineno,
-                "function": record.funcName
+                "function": record.funcName,
             },
             "process": record.process,
-            "thread": record.thread
+            "thread": record.thread,
         }
 
         # Add exception info if present
@@ -502,10 +508,28 @@ class EnhancedJSONFormatter(logging.Formatter):
 
         # Add extra fields
         for key, value in record.__dict__.items():
-            if key not in ["name", "msg", "args", "created", "filename", "funcName",
-                          "levelname", "levelno", "lineno", "module", "msecs",
-                          "pathname", "process", "processName", "relativeCreated",
-                          "thread", "threadName", "exc_info", "exc_text", "stack_info"]:
+            if key not in [
+                "name",
+                "msg",
+                "args",
+                "created",
+                "filename",
+                "funcName",
+                "levelname",
+                "levelno",
+                "lineno",
+                "module",
+                "msecs",
+                "pathname",
+                "process",
+                "processName",
+                "relativeCreated",
+                "thread",
+                "threadName",
+                "exc_info",
+                "exc_text",
+                "stack_info",
+            ]:
                 log_data[key] = value
 
         return json.dumps(log_data)
@@ -531,6 +555,7 @@ class LogRotator:
         """Check if log file should be rotated."""
         try:
             import os
+
             file_size = os.path.getsize(self.filename)
             return file_size >= self.max_bytes
         except (FileNotFoundError, OSError):

@@ -1,6 +1,5 @@
 """Combined query filter."""
 
-
 from ..interfaces import QueryFilter
 
 

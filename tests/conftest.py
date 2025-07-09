@@ -36,7 +36,7 @@ def basic_mysql_env():
     env_vars = {
         "MYSQL_USER": "testuser",
         "MYSQL_PASS": "testpass",
-        "MYSQL_DB": "testdb"
+        "MYSQL_DB": "testdb",
     }
 
     with patch.dict(os.environ, env_vars):
@@ -58,7 +58,7 @@ def full_mysql_env():
         "MYSQL_POOL_SIZE": "10",
         "MYSQL_QUERY_TIMEOUT": "30000",
         "MYSQL_CACHE_TTL": "60000",
-        "MYSQL_LOG_LEVEL": "INFO"
+        "MYSQL_LOG_LEVEL": "INFO",
     }
 
     with patch.dict(os.environ, env_vars):

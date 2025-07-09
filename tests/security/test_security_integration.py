@@ -29,7 +29,7 @@ class TestSecurityIntegration:
             enable_rate_limiting=True,
             filter_mode=FilterMode.BLACKLIST,
             rate_limit_requests_per_minute=10,
-            rate_limit_burst_size=2
+            rate_limit_burst_size=2,
         )
 
         # Create components
@@ -37,7 +37,7 @@ class TestSecurityIntegration:
         query_filter = BlacklistFilter(settings)
         rate_limiter = TokenBucketLimiter(
             requests_per_minute=settings.rate_limit_requests_per_minute,
-            burst_size=settings.rate_limit_burst_size
+            burst_size=settings.rate_limit_burst_size,
         )
 
         # Create manager
@@ -45,7 +45,7 @@ class TestSecurityIntegration:
             settings=settings,
             injection_detector=injection_detector,
             query_filter=query_filter,
-            rate_limiter=rate_limiter
+            rate_limiter=rate_limiter,
         )
 
         context = SecurityContext(user_id="test_user")
@@ -84,7 +84,7 @@ class TestSecurityIntegration:
         settings = SecuritySettings(
             enable_injection_detection=False,
             enable_rate_limiting=False,
-            filter_mode=FilterMode.BLACKLIST
+            filter_mode=FilterMode.BLACKLIST,
         )
 
         manager = SecurityManager(settings=settings)
@@ -102,37 +102,38 @@ class TestSecurityIntegration:
     async def test_whitelist_mode_integration(self):
         """Test security with whitelist mode."""
         settings = SecuritySettings(
-            enable_injection_detection=True,
-            filter_mode=FilterMode.WHITELIST
+            enable_injection_detection=True, filter_mode=FilterMode.WHITELIST
         )
 
         # Define allowed queries
         whitelist_patterns = [
             r"^SELECT \* FROM users WHERE id = %s$",
-            r"^INSERT INTO logs \(message\) VALUES \(%s\)$"
+            r"^INSERT INTO logs \(message\) VALUES \(%s\)$",
         ]
 
         manager = SecurityManager(
             settings=settings,
             injection_detector=SQLInjectionDetector(),
-            query_filter=WhitelistFilter(patterns=whitelist_patterns)
+            query_filter=WhitelistFilter(patterns=whitelist_patterns),
         )
 
         context = SecurityContext(user_id="test_user")
 
         # Whitelisted query should pass
-        await manager.validate_query("SELECT * FROM users WHERE id = %s", (123,), context)
+        await manager.validate_query(
+            "SELECT * FROM users WHERE id = %s", (123,), context
+        )
 
         # Non-whitelisted query should fail
         with pytest.raises(FilteredQueryError):
-            await manager.validate_query("DELETE FROM users WHERE id = %s", (123,), context)
+            await manager.validate_query(
+                "DELETE FROM users WHERE id = %s", (123,), context
+            )
 
         # Injection in whitelisted pattern should still be caught
         with pytest.raises(InjectionError):
             await manager.validate_query(
-                "SELECT * FROM users WHERE id = %s",
-                ("1' OR '1'='1",),
-                context
+                "SELECT * FROM users WHERE id = %s", ("1' OR '1'='1",), context
             )
 
     @pytest.mark.asyncio
@@ -142,19 +143,16 @@ class TestSecurityIntegration:
             enable_rate_limiting=True,
             rate_limit_requests_per_minute=10,
             rate_limit_burst_size=2,
-            rate_limit_per_user={"premium_user": 20}
+            rate_limit_per_user={"premium_user": 20},
         )
 
         rate_limiter = TokenBucketLimiter(
             requests_per_minute=settings.rate_limit_requests_per_minute,
             burst_size=settings.rate_limit_burst_size,
-            per_user_limits=settings.rate_limit_per_user
+            per_user_limits=settings.rate_limit_per_user,
         )
 
-        manager = SecurityManager(
-            settings=settings,
-            rate_limiter=rate_limiter
-        )
+        manager = SecurityManager(settings=settings, rate_limiter=rate_limiter)
 
         # Regular user context
         regular_context = SecurityContext(user_id="regular_user")
@@ -181,7 +179,7 @@ class TestSecurityIntegration:
         settings = SecuritySettings(
             enable_injection_detection=True,
             enable_rate_limiting=True,
-            log_security_events=True
+            log_security_events=True,
         )
 
         # Mock logger to verify context
@@ -190,24 +188,20 @@ class TestSecurityIntegration:
         manager = SecurityManager(
             settings=settings,
             injection_detector=SQLInjectionDetector(),
-            rate_limiter=TokenBucketLimiter(10, 5)
+            rate_limiter=TokenBucketLimiter(10, 5),
         )
 
         # Patch logger
         manager.logger = mock_logger
 
         context = SecurityContext(
-            user_id="test_user",
-            ip_address="192.168.1.1",
-            request_id="req-123"
+            user_id="test_user", ip_address="192.168.1.1", request_id="req-123"
         )
 
         # Trigger injection error
         with contextlib.suppress(InjectionError):
             await manager.validate_query(
-                "SELECT * FROM users WHERE id = %s",
-                ("1' OR '1'='1",),
-                context
+                "SELECT * FROM users WHERE id = %s", ("1' OR '1'='1",), context
             )
 
         # Verify context was logged
@@ -220,15 +214,15 @@ class TestSecurityIntegration:
         """Test combined blacklist and whitelist filtering."""
         from fastmcp_mysql.security.filtering import CombinedFilter
 
-        settings = SecuritySettings(
-            filter_mode=FilterMode.COMBINED
-        )
+        settings = SecuritySettings(filter_mode=FilterMode.COMBINED)
 
         # Whitelist: only allow specific patterns
-        whitelist = WhitelistFilter(patterns=[
-            r"^SELECT .* FROM (users|products|orders).*$",
-            r"^INSERT INTO (logs|audit).*$"
-        ])
+        whitelist = WhitelistFilter(
+            patterns=[
+                r"^SELECT .* FROM (users|products|orders).*$",
+                r"^INSERT INTO (logs|audit).*$",
+            ]
+        )
 
         # Blacklist: block dangerous patterns even if whitelisted
         blacklist = BlacklistFilter(settings)
@@ -236,26 +230,19 @@ class TestSecurityIntegration:
         # Combined filter
         combined = CombinedFilter(filters=[whitelist, blacklist])
 
-        manager = SecurityManager(
-            settings=settings,
-            query_filter=combined
-        )
+        manager = SecurityManager(settings=settings, query_filter=combined)
 
         context = SecurityContext(user_id="test_user")
 
         # Should pass: whitelisted and not blacklisted
         await manager.validate_query(
-            "SELECT * FROM users WHERE id = %s",
-            (123,),
-            context
+            "SELECT * FROM users WHERE id = %s", (123,), context
         )
 
         # Should fail: not whitelisted
         with pytest.raises(FilteredQueryError):
             await manager.validate_query(
-                "SELECT * FROM customers WHERE id = %s",
-                (123,),
-                context
+                "SELECT * FROM customers WHERE id = %s", (123,), context
             )
 
         # Should fail: whitelisted table but blacklisted operation
@@ -263,7 +250,7 @@ class TestSecurityIntegration:
             await manager.validate_query(
                 "SELECT * FROM users WHERE id IN (SELECT id FROM information_schema.tables)",
                 None,
-                context
+                context,
             )
 
     @pytest.mark.asyncio
@@ -272,7 +259,7 @@ class TestSecurityIntegration:
         settings = SecuritySettings(
             enable_injection_detection=True,
             enable_rate_limiting=True,
-            filter_mode=FilterMode.BLACKLIST
+            filter_mode=FilterMode.BLACKLIST,
         )
 
         # Create rate limiter with 10 requests per minute, burst 2
@@ -282,7 +269,7 @@ class TestSecurityIntegration:
             settings=settings,
             injection_detector=SQLInjectionDetector(),
             query_filter=BlacklistFilter(settings),
-            rate_limiter=rate_limiter
+            rate_limiter=rate_limiter,
         )
 
         # Use unique user ID to avoid conflicts
@@ -298,7 +285,7 @@ class TestSecurityIntegration:
             await manager.validate_query(
                 "SELECT * FROM users WHERE id = '1' OR '1'='1'",  # Also has injection
                 None,
-                context
+                context,
             )
 
         # Should be rate limit error, not injection error
@@ -312,18 +299,14 @@ class TestSecurityIntegration:
         settings = SecuritySettings(
             enable_injection_detection=True,
             log_security_events=True,
-            log_rejected_queries=True
+            log_rejected_queries=True,
         )
 
         manager = SecurityManager(
-            settings=settings,
-            injection_detector=SQLInjectionDetector()
+            settings=settings, injection_detector=SQLInjectionDetector()
         )
 
-        context = SecurityContext(
-            user_id="attacker",
-            ip_address="10.0.0.1"
-        )
+        context = SecurityContext(user_id="attacker", ip_address="10.0.0.1")
 
         # Enable debug logging
         caplog.set_level(logging.DEBUG)
@@ -331,9 +314,7 @@ class TestSecurityIntegration:
         # Attempt injection
         with pytest.raises(InjectionError):
             await manager.validate_query(
-                "SELECT * FROM users WHERE id = %s",
-                ("1' OR '1'='1",),
-                context
+                "SELECT * FROM users WHERE id = %s", ("1' OR '1'='1",), context
             )
 
         # Verify security event was logged

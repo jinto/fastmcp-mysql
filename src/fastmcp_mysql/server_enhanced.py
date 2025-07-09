@@ -32,21 +32,25 @@ _metrics_logger: MetricsLogger | None = None
 def setup_observability(settings: Settings) -> None:
     """Set up observability systems."""
     # Set up enhanced logging
-    log_dir = Path(settings.log_dir) if hasattr(settings, 'log_dir') else Path("/var/log/fastmcp-mysql")
+    log_dir = (
+        Path(settings.log_dir)
+        if hasattr(settings, "log_dir")
+        else Path("/var/log/fastmcp-mysql")
+    )
     setup_enhanced_logging(
         log_level=settings.log_level,
         log_dir=log_dir,
-        enable_file_logging=getattr(settings, 'enable_file_logging', True),
-        enable_console_logging=True
+        enable_file_logging=getattr(settings, "enable_file_logging", True),
+        enable_console_logging=True,
     )
 
     # Set up tracing
-    otlp_endpoint = getattr(settings, 'otlp_endpoint', None)
+    otlp_endpoint = getattr(settings, "otlp_endpoint", None)
     if otlp_endpoint:
         setup_tracing(
             service_name="fastmcp-mysql",
             otlp_endpoint=otlp_endpoint,
-            enabled=getattr(settings, 'enable_tracing', True)
+            enabled=getattr(settings, "enable_tracing", True),
         )
 
     # Create metrics logger
@@ -81,10 +85,12 @@ async def create_enhanced_server() -> FastMCP:
     cache_manager = None
     if settings.cache_enabled:
         from .cache.factory import create_cache_manager
+
         cache_manager = create_cache_manager(settings)
 
     # Initialize security
     from .server import setup_security
+
     security_manager = setup_security(settings)
     if security_manager:
         set_security_manager(security_manager)
@@ -105,9 +111,9 @@ async def create_enhanced_server() -> FastMCP:
                 "logging": "enhanced",
                 "metrics": "enabled",
                 "health_checks": "enabled",
-                "tracing": bool(getattr(settings, 'otlp_endpoint', None)),
-            }
-        }
+                "tracing": bool(getattr(settings, "otlp_endpoint", None)),
+            },
+        },
     )
 
     # Register tools
@@ -118,7 +124,7 @@ async def create_enhanced_server() -> FastMCP:
         query: str,
         params: list[Any] | None = None,
         database: str | None = None,
-        context: Context | None = None
+        context: Context | None = None,
     ) -> dict[str, Any]:
         """Execute a MySQL query with observability.
 
@@ -132,18 +138,19 @@ async def create_enhanced_server() -> FastMCP:
             Query execution result
         """
         # Create request context
-        request_id = getattr(context, 'request_id', None) if context else None
+        request_id = getattr(context, "request_id", None) if context else None
 
         with request_context(
             request_id=request_id,
-            user_id=getattr(context, 'user_id', None) if context else None,
-            session_id=getattr(context, 'session_id', None) if context else None,
+            user_id=getattr(context, "user_id", None) if context else None,
+            session_id=getattr(context, "session_id", None) if context else None,
         ):
             start_time = time.time()
 
             try:
                 # Execute query
                 from .tools.query import mysql_query as _mysql_query
+
                 result = await _mysql_query(query, params, database, context)
 
                 # Record metrics
@@ -154,7 +161,7 @@ async def create_enhanced_server() -> FastMCP:
                     query_type=query_type,
                     duration_ms=duration_ms,
                     success=result.get("success", False),
-                    query=query
+                    query=query,
                 )
 
                 # Log metrics
@@ -162,9 +169,11 @@ async def create_enhanced_server() -> FastMCP:
                     _metrics_logger.log_query_metrics(
                         query=query,
                         duration_ms=duration_ms,
-                        rows_affected=result.get("metadata", {}).get("rows_affected", 0),
+                        rows_affected=result.get("metadata", {}).get(
+                            "rows_affected", 0
+                        ),
                         success=result.get("success", False),
-                        error=result.get("error")
+                        error=result.get("error"),
                     )
 
                 return result
@@ -172,7 +181,9 @@ async def create_enhanced_server() -> FastMCP:
             except Exception as e:
                 # Record error
                 duration_ms = (time.time() - start_time) * 1000
-                metrics_collector.record_error("query_error", str(e), {"query": query[:100]})
+                metrics_collector.record_error(
+                    "query_error", str(e), {"query": query[:100]}
+                )
 
                 # Log error metrics
                 if _metrics_logger:
@@ -181,7 +192,7 @@ async def create_enhanced_server() -> FastMCP:
                         duration_ms=duration_ms,
                         rows_affected=0,
                         success=False,
-                        error=str(e)
+                        error=str(e),
                     )
 
                 raise
@@ -194,10 +205,7 @@ async def create_enhanced_server() -> FastMCP:
             Health check results
         """
         if not _health_checker:
-            return {
-                "status": "unknown",
-                "message": "Health checker not initialized"
-            }
+            return {"status": "unknown", "message": "Health checker not initialized"}
 
         result = await _health_checker.check_all()
         return result.to_dict()
@@ -230,14 +238,14 @@ async def create_enhanced_server() -> FastMCP:
                 metrics_collector.update_connection_pool(
                     total=pool_metrics["total_connections"],
                     active=pool_metrics["used_connections"],
-                    max_size=pool_metrics["max_size"]
+                    max_size=pool_metrics["max_size"],
                 )
 
                 if _metrics_logger:
                     _metrics_logger.log_connection_metrics(
                         total=pool_metrics["total_connections"],
                         free=pool_metrics["free_connections"],
-                        used=pool_metrics["used_connections"]
+                        used=pool_metrics["used_connections"],
                     )
 
                 await asyncio.sleep(30)  # Update every 30 seconds
@@ -255,8 +263,7 @@ async def create_enhanced_server() -> FastMCP:
                 # Update cache size
                 metrics = metrics_collector.cache_metrics
                 metrics.update_size(
-                    current=cache_manager.size(),
-                    max_size=cache_manager.max_size
+                    current=cache_manager.size(), max_size=cache_manager.max_size
                 )
 
                 if _metrics_logger:
@@ -264,7 +271,7 @@ async def create_enhanced_server() -> FastMCP:
                         hits=metrics.hits,
                         misses=metrics.misses,
                         evictions=metrics.evictions,
-                        size=metrics.current_size
+                        size=metrics.current_size,
                     )
 
                 await asyncio.sleep(60)  # Update every minute

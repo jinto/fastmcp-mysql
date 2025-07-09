@@ -19,6 +19,7 @@ from ..config import LogLevel
 @dataclass
 class RequestContext:
     """Context information for a request."""
+
     request_id: str
     user_id: str | None = None
     session_id: str | None = None
@@ -34,7 +35,9 @@ class RequestContext:
 class EnhancedJSONFormatter(logging.Formatter):
     """Enhanced JSON formatter with context and metrics support."""
 
-    def __init__(self, include_hostname: bool = True, include_process_info: bool = True):
+    def __init__(
+        self, include_hostname: bool = True, include_process_info: bool = True
+    ):
         """Initialize enhanced formatter.
 
         Args:
@@ -76,22 +79,42 @@ class EnhancedJSONFormatter(logging.Formatter):
             }
 
         # Add context from thread-local storage
-        context = getattr(threading.current_thread(), 'request_context', None)
+        context = getattr(threading.current_thread(), "request_context", None)
         if context and isinstance(context, RequestContext):
             log_data["context"] = context.to_dict()
 
         # Add extra fields
         if hasattr(record, "__dict__"):
             for key, value in record.__dict__.items():
-                if key not in ["name", "msg", "args", "created", "filename", "funcName",
-                              "levelname", "levelno", "lineno", "module", "msecs",
-                              "pathname", "process", "processName", "relativeCreated",
-                              "thread", "threadName", "exc_info", "exc_text", "stack_info"]:
+                if key not in [
+                    "name",
+                    "msg",
+                    "args",
+                    "created",
+                    "filename",
+                    "funcName",
+                    "levelname",
+                    "levelno",
+                    "lineno",
+                    "module",
+                    "msecs",
+                    "pathname",
+                    "process",
+                    "processName",
+                    "relativeCreated",
+                    "thread",
+                    "threadName",
+                    "exc_info",
+                    "exc_text",
+                    "stack_info",
+                ]:
                     # Serialize complex objects
                     try:
                         if hasattr(value, "to_dict"):
                             log_data[key] = value.to_dict()
-                        elif isinstance(value, dict | list | str | int | float | bool | type(None)):
+                        elif isinstance(
+                            value, dict | list | str | int | float | bool | type(None)
+                        ):
                             log_data[key] = value
                         else:
                             log_data[key] = str(value)
@@ -123,16 +146,16 @@ class ContextLogger:
     def _log(self, level: int, msg: str, *args, **kwargs):
         """Log with context information."""
         # Get context from thread-local storage
-        context = getattr(threading.current_thread(), 'request_context', None)
+        context = getattr(threading.current_thread(), "request_context", None)
 
         # Merge context into extra
-        extra = kwargs.get('extra', {})
+        extra = kwargs.get("extra", {})
         if context and isinstance(context, RequestContext):
-            extra['request_id'] = context.request_id
-            extra['user_id'] = context.user_id
-            extra['session_id'] = context.session_id
+            extra["request_id"] = context.request_id
+            extra["user_id"] = context.user_id
+            extra["session_id"] = context.session_id
 
-        kwargs['extra'] = extra
+        kwargs["extra"] = extra
         self.logger.log(level, msg, *args, **kwargs)
 
     def debug(self, msg: str, *args, **kwargs):
@@ -167,8 +190,14 @@ class MetricsLogger:
         """
         self.logger = logger
 
-    def log_query_metrics(self, query: str, duration_ms: float, rows_affected: int,
-                         success: bool, error: str | None = None):
+    def log_query_metrics(
+        self,
+        query: str,
+        duration_ms: float,
+        rows_affected: int,
+        success: bool,
+        error: str | None = None,
+    ):
         """Log query execution metrics."""
         self.logger.info(
             "query_executed",
@@ -181,7 +210,7 @@ class MetricsLogger:
                     "success": success,
                     "error": error,
                 }
-            }
+            },
         )
 
     def log_connection_metrics(self, total: int, free: int, used: int):
@@ -196,7 +225,7 @@ class MetricsLogger:
                     "used_connections": used,
                     "utilization": (used / total * 100) if total > 0 else 0,
                 }
-            }
+            },
         )
 
     def log_cache_metrics(self, hits: int, misses: int, evictions: int, size: int):
@@ -213,7 +242,7 @@ class MetricsLogger:
                     "size": size,
                     "hit_rate": hit_rate,
                 }
-            }
+            },
         )
 
     def log_error_metrics(self, error_type: str, count: int, rate: float):
@@ -227,12 +256,13 @@ class MetricsLogger:
                     "count": count,
                     "rate_per_minute": rate,
                 }
-            }
+            },
         )
 
 
-def setup_rotating_file_handler(log_dir: Path, max_bytes: int = 100 * 1024 * 1024,
-                               backup_count: int = 10) -> logging.Handler:
+def setup_rotating_file_handler(
+    log_dir: Path, max_bytes: int = 100 * 1024 * 1024, backup_count: int = 10
+) -> logging.Handler:
     """Set up rotating file handler.
 
     Args:
@@ -253,7 +283,7 @@ def setup_rotating_file_handler(log_dir: Path, max_bytes: int = 100 * 1024 * 102
         log_dir / "fastmcp-mysql.log",
         maxBytes=max_bytes,
         backupCount=backup_count,
-        encoding='utf-8'
+        encoding="utf-8",
     )
     all_handler.setFormatter(EnhancedJSONFormatter())
     handlers.append(all_handler)
@@ -263,7 +293,7 @@ def setup_rotating_file_handler(log_dir: Path, max_bytes: int = 100 * 1024 * 102
         log_dir / "fastmcp-mysql-errors.log",
         maxBytes=max_bytes,
         backupCount=backup_count,
-        encoding='utf-8'
+        encoding="utf-8",
     )
     error_handler.setLevel(logging.ERROR)
     error_handler.setFormatter(EnhancedJSONFormatter())
@@ -291,7 +321,7 @@ def request_context(request_id: str | None = None, **kwargs):
 
     # Store in thread-local storage
     thread = threading.current_thread()
-    old_context = getattr(thread, 'request_context', None)
+    old_context = getattr(thread, "request_context", None)
     thread.request_context = context
 
     try:
@@ -301,13 +331,15 @@ def request_context(request_id: str | None = None, **kwargs):
         if old_context:
             thread.request_context = old_context
         else:
-            delattr(thread, 'request_context')
+            delattr(thread, "request_context")
 
 
-def setup_enhanced_logging(log_level: LogLevel = LogLevel.INFO,
-                          log_dir: Path | None = None,
-                          enable_file_logging: bool = True,
-                          enable_console_logging: bool = True) -> None:
+def setup_enhanced_logging(
+    log_level: LogLevel = LogLevel.INFO,
+    log_dir: Path | None = None,
+    enable_file_logging: bool = True,
+    enable_console_logging: bool = True,
+) -> None:
     """Set up enhanced logging system.
 
     Args:
@@ -341,7 +373,7 @@ def setup_enhanced_logging(log_level: LogLevel = LogLevel.INFO,
     logging.basicConfig(
         level=level_map.get(log_level, logging.INFO),
         handlers=handlers,
-        force=True  # Force reconfiguration
+        force=True,  # Force reconfiguration
     )
 
     # Set specific loggers
@@ -363,5 +395,5 @@ def setup_enhanced_logging(log_level: LogLevel = LogLevel.INFO,
                 "console_logging": enable_console_logging,
                 "log_dir": str(log_dir) if log_dir else None,
             }
-        }
+        },
     )

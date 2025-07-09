@@ -31,14 +31,14 @@ def security_manager():
         enable_injection_detection=True,
         enable_rate_limiting=True,
         rate_limit_requests_per_minute=10,
-        rate_limit_burst_size=2
+        rate_limit_burst_size=2,
     )
 
     return SecurityManager(
         settings=settings,
         injection_detector=SQLInjectionDetector(),
         query_filter=BlacklistFilter(settings),
-        rate_limiter=TokenBucketLimiter(10, 2)
+        rate_limiter=TokenBucketLimiter(10, 2),
     )
 
 
@@ -46,7 +46,9 @@ class TestSecurityIntegration:
     """Test security integration with query execution."""
 
     @pytest.mark.asyncio
-    async def test_safe_query_execution(self, mock_connection_manager, security_manager):
+    async def test_safe_query_execution(
+        self, mock_connection_manager, security_manager
+    ):
         """Test that safe queries execute successfully."""
         # Set up managers
         set_connection_manager(mock_connection_manager)
@@ -54,8 +56,7 @@ class TestSecurityIntegration:
 
         # Execute safe query
         result = await mysql_query(
-            query="SELECT * FROM users WHERE id = %s",
-            params=[123]
+            query="SELECT * FROM users WHERE id = %s", params=[123]
         )
 
         assert result["success"] is True
@@ -63,7 +64,9 @@ class TestSecurityIntegration:
         assert mock_connection_manager.execute.called
 
     @pytest.mark.asyncio
-    async def test_sql_injection_blocked(self, mock_connection_manager, security_manager):
+    async def test_sql_injection_blocked(
+        self, mock_connection_manager, security_manager
+    ):
         """Test that SQL injection attempts are blocked."""
         # Set up managers
         set_connection_manager(mock_connection_manager)
@@ -71,8 +74,7 @@ class TestSecurityIntegration:
 
         # Attempt SQL injection
         result = await mysql_query(
-            query="SELECT * FROM users WHERE id = %s",
-            params=["1' OR '1'='1"]
+            query="SELECT * FROM users WHERE id = %s", params=["1' OR '1'='1"]
         )
 
         assert result["success"] is False
@@ -80,16 +82,16 @@ class TestSecurityIntegration:
         assert not mock_connection_manager.execute.called
 
     @pytest.mark.asyncio
-    async def test_blacklisted_query_blocked(self, mock_connection_manager, security_manager):
+    async def test_blacklisted_query_blocked(
+        self, mock_connection_manager, security_manager
+    ):
         """Test that blacklisted queries are blocked."""
         # Set up managers
         set_connection_manager(mock_connection_manager)
         set_security_manager(security_manager)
 
         # Attempt blacklisted query
-        result = await mysql_query(
-            query="SELECT * FROM information_schema.tables"
-        )
+        result = await mysql_query(query="SELECT * FROM information_schema.tables")
 
         assert result["success"] is False
         assert "blacklisted" in result["error"].lower()
@@ -138,14 +140,14 @@ class TestSecurityIntegration:
             enable_injection_detection=True,
             enable_rate_limiting=True,
             rate_limit_requests_per_minute=10,
-            rate_limit_burst_size=3  # Slightly higher for this test
+            rate_limit_burst_size=3,  # Slightly higher for this test
         )
 
         security_manager = SecurityManager(
             settings=settings,
             injection_detector=SQLInjectionDetector(),
             query_filter=BlacklistFilter(settings),
-            rate_limiter=TokenBucketLimiter(10, 3)
+            rate_limiter=TokenBucketLimiter(10, 3),
         )
 
         # Set up managers
@@ -161,17 +163,11 @@ class TestSecurityIntegration:
         # Execute queries with context
         # This user should have their own limit
         for _i in range(3):  # burst_size = 3
-            result = await mysql_query(
-                query="SELECT 1",
-                context=mock_context
-            )
+            result = await mysql_query(query="SELECT 1", context=mock_context)
             assert result["success"] is True
 
         # Should hit rate limit for this user
-        result = await mysql_query(
-            query="SELECT 1",
-            context=mock_context
-        )
+        result = await mysql_query(query="SELECT 1", context=mock_context)
         assert result["success"] is False
         assert "rate limit" in result["error"].lower()
 
@@ -183,9 +179,7 @@ class TestSecurityIntegration:
         set_security_manager(None)  # Disable security to test QueryValidator
 
         # DDL should be blocked by QueryValidator
-        result = await mysql_query(
-            query="DROP TABLE users"
-        )
+        result = await mysql_query(query="DROP TABLE users")
 
         assert result["success"] is False
         assert "DDL operations are not allowed" in result["error"]
@@ -200,9 +194,7 @@ class TestSecurityIntegration:
 
         # Query that would fail both security and validation
         # (injection + DDL)
-        result = await mysql_query(
-            query="DROP TABLE users WHERE '1'='1'"
-        )
+        result = await mysql_query(query="DROP TABLE users WHERE '1'='1'")
 
         # Security should catch it first
         assert result["success"] is False

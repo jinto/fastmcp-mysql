@@ -1,4 +1,5 @@
 """Cache manager for coordinating cache operations."""
+
 import logging
 from typing import Any
 
@@ -65,7 +66,7 @@ class CacheManager:
         self,
         query: str,
         params: tuple[Any, ...] | None = None,
-        database: str | None = None
+        database: str | None = None,
     ) -> Any | None:
         """Get cached query result.
 
@@ -106,7 +107,7 @@ class CacheManager:
         result: Any,
         params: tuple[Any, ...] | None = None,
         database: str | None = None,
-        ttl: int | None = None
+        ttl: int | None = None,
     ) -> None:
         """Cache a query result.
 
@@ -131,9 +132,7 @@ class CacheManager:
         logger.debug(f"Cached result for key: {cache_key}")
 
     async def invalidate_on_write(
-        self,
-        query: str,
-        database: str | None = None
+        self, query: str, database: str | None = None
     ) -> None:
         """Invalidate cache entries affected by a write operation.
 
@@ -144,15 +143,11 @@ class CacheManager:
         if not self.enabled or not self.cache:
             return
 
-        await self.invalidator.invalidate_on_write(
-            query, self.cache, database
-        )
+        await self.invalidator.invalidate_on_write(query, self.cache, database)
         logger.debug(f"Invalidated cache for query: {query[:50]}...")
 
     async def invalidate_batch(
-        self,
-        queries: list[str],
-        database: str | None = None
+        self, queries: list[str], database: str | None = None
     ) -> None:
         """Invalidate cache for a batch of queries.
 
@@ -163,9 +158,7 @@ class CacheManager:
         if not self.enabled or not self.cache:
             return
 
-        await self.invalidator.invalidate_batch(
-            queries, self.cache, database
-        )
+        await self.invalidator.invalidate_batch(queries, self.cache, database)
 
     def add_table_dependency(self, table: str, depends_on: list[str]) -> None:
         """Add table dependencies for invalidation.
@@ -198,16 +191,20 @@ class CacheManager:
             "query_count": self._query_count,
             "cache_hits": self._cache_hits,
             "cache_misses": self._cache_misses,
-            "hit_rate": self._cache_hits / self._query_count if self._query_count > 0 else 0.0
+            "hit_rate": (
+                self._cache_hits / self._query_count if self._query_count > 0 else 0.0
+            ),
         }
 
         if cache_stats:
-            manager_stats.update({
-                "cache_size": cache_stats.size,
-                "cache_max_size": cache_stats.max_size,
-                "cache_evictions": cache_stats.evictions,
-                "cache_utilization": cache_stats.utilization
-            })
+            manager_stats.update(
+                {
+                    "cache_size": cache_stats.size,
+                    "cache_max_size": cache_stats.max_size,
+                    "cache_evictions": cache_stats.evictions,
+                    "cache_utilization": cache_stats.utilization,
+                }
+            )
 
         return manager_stats
 
@@ -220,7 +217,7 @@ class CacheManager:
     async def warm_cache(
         self,
         queries: list[tuple[str, tuple[Any, ...] | None, Any]],
-        database: str | None = None
+        database: str | None = None,
     ) -> None:
         """Warm up cache with pre-computed results.
 
@@ -240,7 +237,7 @@ class CacheManager:
         self,
         query: str,
         params: tuple[Any, ...] | None = None,
-        database: str | None = None
+        database: str | None = None,
     ) -> str:
         """Get the cache key for a query (for debugging).
 

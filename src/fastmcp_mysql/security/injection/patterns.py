@@ -6,14 +6,11 @@ from re import Pattern
 # Compile patterns once for performance
 COMMENT_PATTERNS: list[Pattern] = [
     re.compile(r"--\s*", re.IGNORECASE),  # SQL line comment
-    re.compile(r"#\s*", re.IGNORECASE),   # MySQL comment
+    re.compile(r"#\s*", re.IGNORECASE),  # MySQL comment
     re.compile(r"/\*.*?\*/", re.IGNORECASE | re.DOTALL),  # Block comment
 ]
 
-UNION_PATTERN = re.compile(
-    r"\bUNION\s+(ALL\s+)?SELECT\b",
-    re.IGNORECASE
-)
+UNION_PATTERN = re.compile(r"\bUNION\s+(ALL\s+)?SELECT\b", re.IGNORECASE)
 
 SEMICOLON_PATTERN = re.compile(r";\s*\S")  # Semicolon followed by non-whitespace
 
@@ -46,7 +43,9 @@ UNSAFE_QUERY_PATTERNS: list[Pattern] = [
     re.compile(r"'\s*\+\s*\w+\s*\+\s*'"),  # String concatenation
     re.compile(r'"\s*\+\s*\w+\s*\+\s*"'),
     re.compile(r"'\s*\|\|\s*\w+\s*\|\|\s*'"),  # Oracle/PostgreSQL concat
-    re.compile(r"CONCAT\s*\([^)]*\$\w+[^)]*\)", re.IGNORECASE),  # PHP variable in CONCAT
+    re.compile(
+        r"CONCAT\s*\([^)]*\$\w+[^)]*\)", re.IGNORECASE
+    ),  # PHP variable in CONCAT
 ]
 
 # Blind SQL injection patterns
@@ -61,22 +60,17 @@ PARAMETER_INJECTION_PATTERNS = [
     # Classic injection
     (r"'\s*(OR|AND)\s+'?\d+'?\s*=\s*'?\d+'?", "Classic SQL injection"),
     (r'"\s*(OR|AND)\s+"?\d+"?\s*=\s*"?\d+"?', "Classic SQL injection"),
-
     # Comment-based
     (r"'\s*--", "SQL comment injection"),
     (r"'\s*#", "MySQL comment injection"),
     (r"'\s*/\*", "Block comment injection"),
-
     # Union-based
     (r"'\s*UNION\s+(ALL\s+)?SELECT", "UNION injection"),
-
     # Function calls
     (r"'\s*AND\s+\w+\s*\(", "Function-based injection"),
     (r"'\s*OR\s+\w+\s*\(", "Function-based injection"),
-
     # Stacked queries
     (r"';\s*(SELECT|INSERT|UPDATE|DELETE|DROP|CREATE)", "Stacked query injection"),
-
     # Boolean logic
     (r"'\s*(AND|OR)\s+\d+\s*[<>=]+\s*\d+", "Boolean-based injection"),
 ]

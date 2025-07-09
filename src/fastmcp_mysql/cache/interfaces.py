@@ -1,4 +1,5 @@
 """Cache interfaces and base classes."""
+
 import hashlib
 import os
 import re
@@ -11,6 +12,7 @@ from typing import Any
 @dataclass
 class CacheEntry:
     """Represents a single cache entry."""
+
     key: str
     value: Any
     created_at: datetime
@@ -34,6 +36,7 @@ class CacheEntry:
 @dataclass
 class CacheStats:
     """Cache statistics."""
+
     hits: int = 0
     misses: int = 0
     evictions: int = 0
@@ -64,13 +67,14 @@ class CacheStats:
             "size": self.size,
             "max_size": self.max_size,
             "hit_rate": self.hit_rate,
-            "utilization": self.utilization
+            "utilization": self.utilization,
         }
 
 
 @dataclass
 class CacheConfig:
     """Cache configuration."""
+
     enabled: bool = True
     ttl: int = 300  # Default 5 minutes
     max_size: int = 1000
@@ -103,20 +107,19 @@ class CacheConfig:
             ttl=int(os.getenv("MYSQL_CACHE_TTL", "300")),
             max_size=int(os.getenv("MYSQL_CACHE_MAX_SIZE", "1000")),
             eviction_policy=os.getenv("MYSQL_CACHE_EVICTION_POLICY", "lru"),
-
-            memory_enabled=os.getenv("MYSQL_CACHE_MEMORY_ENABLED", "true").lower() == "true",
+            memory_enabled=os.getenv("MYSQL_CACHE_MEMORY_ENABLED", "true").lower()
+            == "true",
             memory_max_size=int(os.getenv("MYSQL_CACHE_MEMORY_MAX_SIZE", "1000")),
             memory_ttl=int(os.getenv("MYSQL_CACHE_MEMORY_TTL", "300")),
-
-            redis_enabled=os.getenv("MYSQL_CACHE_REDIS_ENABLED", "false").lower() == "true",
+            redis_enabled=os.getenv("MYSQL_CACHE_REDIS_ENABLED", "false").lower()
+            == "true",
             redis_url=os.getenv("MYSQL_CACHE_REDIS_URL"),
             redis_ttl=int(os.getenv("MYSQL_CACHE_REDIS_TTL", "3600")),
             redis_prefix=os.getenv("MYSQL_CACHE_REDIS_PREFIX", "fastmcp:mysql:"),
-
             invalidation_mode=os.getenv("MYSQL_CACHE_INVALIDATION_MODE", "aggressive"),
             tag_enabled=os.getenv("MYSQL_CACHE_TAG_ENABLED", "true").lower() == "true",
-
-            stats_enabled=os.getenv("MYSQL_CACHE_STATS_ENABLED", "true").lower() == "true"
+            stats_enabled=os.getenv("MYSQL_CACHE_STATS_ENABLED", "true").lower()
+            == "true",
         )
 
 
@@ -129,14 +132,14 @@ class CacheKeyGenerator:
     def normalize_query(self, query: str) -> str:
         """Normalize SQL query for consistent cache keys."""
         # Remove extra whitespace
-        normalized = re.sub(r'\s+', ' ', query.strip())
+        normalized = re.sub(r"\s+", " ", query.strip())
 
         # Convert to lowercase for consistency
         normalized = normalized.lower()
 
         # Remove comments
-        normalized = re.sub(r'/\*.*?\*/', '', normalized)
-        normalized = re.sub(r'--.*$', '', normalized, flags=re.MULTILINE)
+        normalized = re.sub(r"/\*.*?\*/", "", normalized)
+        normalized = re.sub(r"--.*$", "", normalized, flags=re.MULTILINE)
 
         return normalized
 
@@ -144,7 +147,7 @@ class CacheKeyGenerator:
         self,
         query: str,
         params: tuple[Any, ...] | None = None,
-        database: str | None = None
+        database: str | None = None,
     ) -> str:
         """Generate a cache key for a query."""
         # Normalize the query
@@ -183,11 +186,11 @@ class CacheKeyGenerator:
         # Simple regex patterns for table extraction
         # This is a basic implementation - could be improved with SQL parser
         patterns = [
-            r'from\s+(\w+)',
-            r'join\s+(\w+)',
-            r'into\s+(\w+)',
-            r'update\s+(\w+)',
-            r'delete\s+from\s+(\w+)'
+            r"from\s+(\w+)",
+            r"join\s+(\w+)",
+            r"into\s+(\w+)",
+            r"update\s+(\w+)",
+            r"delete\s+from\s+(\w+)",
         ]
 
         for pattern in patterns:
