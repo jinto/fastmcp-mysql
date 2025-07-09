@@ -1,7 +1,7 @@
 """FastMCP MySQL Server - Secure MySQL access for LLM applications."""
 
-__version__ = "0.1.0"
-__author__ = "FastMCP MySQL Contributors"
+__version__ = "0.1.1"
+__author__ = "박제권(Jae Kwon Park, jaypark@gmail.com)"
 
 from .server import create_server
 

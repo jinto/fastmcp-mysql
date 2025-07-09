@@ -53,6 +53,8 @@ class QueryType(Enum):
     UPDATE = "UPDATE"
     DELETE = "DELETE"
     DDL = "DDL"
+    USE = "USE"
+    SHOW = "SHOW"
     OTHER = "OTHER"
 
 
@@ -86,6 +88,8 @@ class QueryValidator:
                 r'^\s*(CREATE|DROP|ALTER|TRUNCATE|RENAME)\s+', 
                 re.IGNORECASE
             ),
+            QueryType.USE: re.compile(r'^\s*USE\s+', re.IGNORECASE),
+            QueryType.SHOW: re.compile(r'^\s*SHOW\s+', re.IGNORECASE),
         }
         
         # Pattern for detecting multiple statements
@@ -128,8 +132,8 @@ class QueryValidator:
         if query_type == QueryType.DDL:
             raise ValueError("DDL operations are not allowed")
         
-        # SELECT and OTHER queries are always allowed
-        if query_type in (QueryType.SELECT, QueryType.OTHER):
+        # SELECT, USE, SHOW and OTHER queries are always allowed
+        if query_type in (QueryType.SELECT, QueryType.USE, QueryType.SHOW, QueryType.OTHER):
             return
         
         # Check write permissions

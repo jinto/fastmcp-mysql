@@ -11,32 +11,48 @@ and this project adheres to [Semantic Versioning](https://semver.org/spec/v2.0.0
 - Comprehensive API documentation
 - Additional example scripts for common use cases
 - Performance optimization guide
-- CONTRIBUTING.md with development guidelines
 
-## [1.0.0] - 2024-01-15
+## [0.1.1] - 2025-01-09
+
+### Added
+- Database selection is now optional - can connect to MySQL server without specifying a database
+- Support for `USE` command to switch databases after connection
+- Support for `SHOW` commands (SHOW DATABASES, SHOW TABLES, etc.)
+- PyPI publishing guide (PUBLISH.md)
+- Claude MCP CLI usage examples in README
+
+### Changed
+- `MYSQL_DB` environment variable is now optional
+- Updated query validator to allow USE and SHOW commands
+- Enhanced README with more installation examples
+
+### Fixed
+- Connection issues when database is not specified
+
+## [0.1.0] - 2025-01-09
 
 ### Added
 - Initial release of FastMCP MySQL Server
-- Core query execution tool (`mysql_query`)
+- Core MySQL query execution functionality
 - Comprehensive security features:
   - SQL injection detection and prevention
-  - Query filtering (blacklist/whitelist modes)
-  - Rate limiting with multiple algorithms
-  - Security event logging
-- Connection pooling for improved performance
-- Environment-based configuration
-- Clean Architecture implementation
-- Observability features:
-  - Health checks (`mysql_health`)
-  - Metrics collection (`mysql_metrics`)
-  - Prometheus metrics export (`mysql_metrics_prometheus`)
+  - Query filtering (blacklist/whitelist/combined modes)
+  - Rate limiting (Token Bucket, Sliding Window, Fixed Window)
+- Performance optimization:
+  - Connection pooling
+  - Query result caching (TTL and LRU)
+  - Streaming support for large datasets
+  - Pagination support
+- Monitoring and observability:
   - Structured JSON logging
-  - OpenTelemetry tracing support
-- Query result caching with LRU eviction
-- Support for prepared statements
-- Comprehensive test suite (85%+ coverage)
-- Docker support
-- Claude Desktop integration
+  - Metrics collection (queries, connections, cache, errors)
+  - Health check system
+  - Prometheus metrics export
+- CI/CD pipeline with GitHub Actions
+- Comprehensive test coverage
+- Clean Architecture implementation
+- FastMCP framework integration
+- CONTRIBUTING.md with development guidelines
 
 ### Security
 - Read-only access by default
@@ -44,26 +60,6 @@ and this project adheres to [Semantic Versioning](https://semver.org/spec/v2.0.0
 - DDL operations blocked
 - Advanced SQL injection pattern detection
 - Parameter validation and sanitization
-
-## [0.9.0] - 2024-01-08 (Pre-release)
-
-### Added
-- Basic FastMCP server structure
-- MySQL connection management using aiomysql
-- Environment variable configuration
-- Basic query validation
-- Initial test framework
-
-### Changed
-- Migrated from Node.js implementation to Python
-- Adopted FastMCP framework
-
-## [0.1.0] - 2024-01-01 (Concept)
-
-### Added
-- Project initialization
-- Basic requirements gathering
-- Architecture design based on mcp-server-mysql
 
 ---
 
@@ -90,6 +86,13 @@ Security improvements or fixes
 ---
 
 ## Upgrade Guide
+
+### From 0.1.0 to 0.1.1
+
+1. **Database Configuration**
+   - `MYSQL_DB` is now optional
+   - If not specified, connect to MySQL server without selecting a database
+   - Use `USE database_name` command to switch databases
 
 ### From 0.9.0 to 1.0.0
 

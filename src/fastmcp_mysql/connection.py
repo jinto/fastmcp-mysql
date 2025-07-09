@@ -36,7 +36,7 @@ class ConnectionConfig:
     port: int
     user: str
     password: str
-    database: str
+    database: Optional[str]
     pool_size: int = 10
     charset: str = "utf8mb4"
     connect_timeout: int = 10
@@ -111,7 +111,6 @@ class ConnectionManager:
             "port": self.config.port,
             "user": self.config.user,
             "password": self.config.password,
-            "db": self.config.database,
             "minsize": 1,
             "maxsize": self.config.pool_size,
             "charset": self.config.charset,
@@ -119,6 +118,10 @@ class ConnectionManager:
             "connect_timeout": self.config.connect_timeout,
             "echo": self.config.echo,
         }
+        
+        # Only add db if specified
+        if self.config.database:
+            pool_kwargs["db"] = self.config.database
         
         # Add SSL configuration if provided
         if self.config.ssl:

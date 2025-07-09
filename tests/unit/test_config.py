@@ -18,7 +18,7 @@ class TestSettings:
             Settings(_env_file=None)
         
         errors = exc_info.value.errors()
-        required_fields = {"user", "password", "db"}
+        required_fields = {"user", "password"}
         missing_fields = {error["loc"][0] for error in errors}
         
         assert required_fields == missing_fields
@@ -27,14 +27,14 @@ class TestSettings:
         """Test default values are set correctly."""
         with patch.dict(os.environ, {
             "MYSQL_USER": "testuser",
-            "MYSQL_PASSWORD": "testpass",
-            "MYSQL_DB": "testdb"
+            "MYSQL_PASSWORD": "testpass"
         }):
             settings = Settings(_env_file=None)
             
             # Connection defaults
             assert settings.host == "127.0.0.1"
             assert settings.port == 3306
+            assert settings.db is None  # DB is optional
             
             # Security defaults (all false)
             assert settings.allow_insert is False
@@ -132,6 +132,7 @@ class TestSettings:
 
     def test_connection_string_property(self):
         """Test the connection string property."""
+        # Test with DB
         with patch.dict(os.environ, {
             "MYSQL_USER": "testuser",
             "MYSQL_PASSWORD": "testpass",
@@ -140,6 +141,16 @@ class TestSettings:
             settings = Settings(_env_file=None)
             
             expected = "mysql://testuser:***@127.0.0.1:3306/testdb"
+            assert settings.connection_string_safe == expected
+            
+        # Test without DB
+        with patch.dict(os.environ, {
+            "MYSQL_USER": "testuser",
+            "MYSQL_PASSWORD": "testpass"
+        }):
+            settings = Settings(_env_file=None)
+            
+            expected = "mysql://testuser:***@127.0.0.1:3306/"
             assert settings.connection_string_safe == expected
 
     def test_to_dict_masks_password(self):

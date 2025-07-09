@@ -25,7 +25,7 @@ class Settings(BaseSettings):
     port: int = Field(default=3306, description="MySQL server port")
     user: str = Field(description="MySQL username")
     password: str = Field(description="MySQL password")
-    db: str = Field(description="MySQL database name")
+    db: Optional[str] = Field(default=None, description="MySQL database name (optional)")
     
     # Security settings
     allow_insert: bool = Field(
@@ -200,7 +200,10 @@ class Settings(BaseSettings):
     @property
     def connection_string_safe(self) -> str:
         """Get connection string with masked password."""
-        return f"mysql://{self.user}:***@{self.host}:{self.port}/{self.db}"
+        if self.db:
+            return f"mysql://{self.user}:***@{self.host}:{self.port}/{self.db}"
+        else:
+            return f"mysql://{self.user}:***@{self.host}:{self.port}/"
     
     def to_dict_safe(self) -> Dict[str, Any]:
         """Convert settings to dictionary with masked sensitive values."""

@@ -4,13 +4,13 @@ build-backend = "hatchling.build"
 
 [project]
 name = "fastmcp-mysql"
-version = "0.1.0"
+version = "0.1.1"
 description = "FastMCP server for MySQL database operations"
 readme = "README.md"
 requires-python = ">=3.10"
 license = "MIT"
 authors = [
-    { name = "FastMCP MySQL Contributors", email = "fastmcp-mysql@example.com" },
+    { name = "박제권(Jae Kwon Park)", email = "jaypark@gmail.com" },
 ]
 keywords = ["mcp", "mysql", "database", "fastmcp", "ai", "llm"]
 classifiers = [

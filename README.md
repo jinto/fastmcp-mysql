@@ -43,39 +43,70 @@ Configure the server using environment variables:
 
 ### Required Variables
 
-| Variable | Description | Default |
-|----------|-------------|---------|
-| `MYSQL_USER` | Database username | - |
-| `MYSQL_PASSWORD` | Database password | - |
-| `MYSQL_DB` | Database name | - |
+| Variable         | Description       | Default |
+| ---------------- | ----------------- | ------- |
+| `MYSQL_USER`     | Database username | -       |
+| `MYSQL_PASSWORD` | Database password | -       |
 
 ### Optional Variables
 
-| Variable | Description | Default |
-|----------|-------------|---------|
-| `MYSQL_HOST` | Database host | "127.0.0.1" |
-| `MYSQL_PORT` | Database port | "3306" |
-| `MYSQL_ALLOW_INSERT` | Enable INSERT queries | false |
-| `MYSQL_ALLOW_UPDATE` | Enable UPDATE queries | false |
-| `MYSQL_ALLOW_DELETE` | Enable DELETE queries | false |
-| `MYSQL_POOL_SIZE` | Connection pool size | 10 |
-| `MYSQL_QUERY_TIMEOUT` | Query timeout (ms) | 30000 |
-| `MYSQL_LOG_LEVEL` | Log level (DEBUG, INFO, WARNING, ERROR) | INFO |
-| `MYSQL_CACHE_ENABLED` | Enable query result caching | true |
-| `MYSQL_CACHE_MAX_SIZE` | Maximum cache entries | 1000 |
-| `MYSQL_CACHE_TTL` | Cache TTL (ms) | 60000 |
-| `MYSQL_CACHE_EVICTION_POLICY` | Cache eviction policy (lru/ttl/fifo) | lru |
-| `MYSQL_CACHE_CLEANUP_INTERVAL` | Cache cleanup interval (seconds) | 60.0 |
-| `MYSQL_CACHE_INVALIDATION_MODE` | Cache invalidation strategy | aggressive |
-| `MYSQL_STREAMING_CHUNK_SIZE` | Streaming query chunk size | 1000 |
-| `MYSQL_PAGINATION_DEFAULT_SIZE` | Default page size | 10 |
-| `MYSQL_PAGINATION_MAX_SIZE` | Maximum page size | 1000 |
+| Variable                        | Description                             | Default     |
+| ------------------------------- | --------------------------------------- | ----------- |
+| `MYSQL_HOST`                    | Database host                           | "127.0.0.1" |
+| `MYSQL_PORT`                    | Database port                           | "3306"      |
+| `MYSQL_DB`                      | Database name (optional)                | None        |
+| `MYSQL_ALLOW_INSERT`            | Enable INSERT queries                   | false       |
+| `MYSQL_ALLOW_UPDATE`            | Enable UPDATE queries                   | false       |
+| `MYSQL_ALLOW_DELETE`            | Enable DELETE queries                   | false       |
+| `MYSQL_POOL_SIZE`               | Connection pool size                    | 10          |
+| `MYSQL_QUERY_TIMEOUT`           | Query timeout (ms)                      | 30000       |
+| `MYSQL_LOG_LEVEL`               | Log level (DEBUG, INFO, WARNING, ERROR) | INFO        |
+| `MYSQL_CACHE_ENABLED`           | Enable query result caching             | true        |
+| `MYSQL_CACHE_MAX_SIZE`          | Maximum cache entries                   | 1000        |
+| `MYSQL_CACHE_TTL`               | Cache TTL (ms)                          | 60000       |
+| `MYSQL_CACHE_EVICTION_POLICY`   | Cache eviction policy (lru/ttl/fifo)    | lru         |
+| `MYSQL_CACHE_CLEANUP_INTERVAL`  | Cache cleanup interval (seconds)        | 60.0        |
+| `MYSQL_CACHE_INVALIDATION_MODE` | Cache invalidation strategy             | aggressive  |
+| `MYSQL_STREAMING_CHUNK_SIZE`    | Streaming query chunk size              | 1000        |
+| `MYSQL_PAGINATION_DEFAULT_SIZE` | Default page size                       | 10          |
+| `MYSQL_PAGINATION_MAX_SIZE`     | Maximum page size                       | 1000        |
 
 ## Usage
 
 ### Claude Desktop Configuration
 
-Add to your Claude Desktop configuration:
+#### Using Claude MCP CLI (Recommended)
+
+```bash
+# Install from PyPI (when published)
+claude mcp add fastmcp-mysql \
+  -e MYSQL_HOST="127.0.0.1" \
+  -e MYSQL_PORT="3306" \
+  -e MYSQL_USER="your_username" \
+  -e MYSQL_PASSWORD="your_password" \
+  -e MYSQL_DB="your_database" \
+  -- uvx fastmcp-mysql
+
+# Without specifying a database (use USE command)
+claude mcp add fastmcp-mysql \
+  -e MYSQL_HOST="127.0.0.1" \
+  -e MYSQL_USER="your_username" \
+  -e MYSQL_PASSWORD="your_password" \
+  -- uvx fastmcp-mysql
+
+# For local development
+claude mcp add fastmcp-mysql \
+  -e MYSQL_HOST="127.0.0.1" \
+  -e MYSQL_PORT="3306" \
+  -e MYSQL_USER="your_username" \
+  -e MYSQL_PASSWORD="your_password" \
+  -e MYSQL_DB="your_database" \
+  -- uv run --project /path/to/fastmcp-mysql fastmcp-mysql
+```
+
+#### Manual Configuration
+
+Add to your Claude Desktop configuration file:
 
 ```json
 {
@@ -105,11 +136,13 @@ Add to your Claude Desktop configuration:
 Execute SQL queries against the configured MySQL database.
 
 **Parameters:**
+
 - `query` (string, required): The SQL query to execute
 - `params` (array, optional): Query parameters for prepared statements
 - `database` (string, optional): Target database (for multi-db mode)
 
 **Example:**
+
 ```python
 # Simple query
 result = await mysql_query("SELECT * FROM users WHERE active = 1")
@@ -119,6 +152,11 @@ result = await mysql_query(
     "SELECT * FROM users WHERE age > %s AND city = %s",
     params=[18, "New York"]
 )
+
+# When no database is specified initially
+result = await mysql_query("USE mydb")
+result = await mysql_query("SHOW TABLES")
+result = await mysql_query("SHOW DATABASES")
 ```
 
 ## Security
@@ -128,7 +166,7 @@ result = await mysql_query(
 FastMCP MySQL includes comprehensive security features:
 
 - **Read-only by default**: Write operations must be explicitly enabled
-- **SQL injection prevention**: 
+- **SQL injection prevention**:
   - Advanced pattern detection for SQL injection attempts
   - Parameter validation for all queries
   - Detection of encoded injection attempts (URL, Unicode, Hex)
@@ -136,7 +174,7 @@ FastMCP MySQL includes comprehensive security features:
   - Blacklist mode: Blocks dangerous operations (DDL, system tables, file operations)
   - Whitelist mode: Only allows explicitly approved query patterns
   - Customizable filtering rules
-- **Rate limiting**: 
+- **Rate limiting**:
   - Per-user request throttling
   - Configurable algorithms (Token Bucket, Sliding Window, Fixed Window)
   - Burst protection
@@ -145,20 +183,20 @@ FastMCP MySQL includes comprehensive security features:
 
 Configure security features via environment variables:
 
-| Variable | Description | Default |
-|----------|-------------|---------|
-| `MYSQL_ENABLE_SECURITY` | Enable all security features | true |
-| `MYSQL_ENABLE_INJECTION_DETECTION` | Enable SQL injection detection | true |
-| `MYSQL_ENABLE_RATE_LIMITING` | Enable rate limiting | true |
-| `MYSQL_FILTER_MODE` | Filter mode (blacklist/whitelist/combined) | blacklist |
-| `MYSQL_RATE_LIMIT_RPM` | Rate limit requests per minute | 60 |
-| `MYSQL_RATE_LIMIT_BURST` | Burst size for rate limiting | 10 |
-| `MYSQL_RATE_LIMIT_ALGORITHM` | Rate limiting algorithm (token_bucket/sliding_window/fixed_window) | token_bucket |
-| `MYSQL_MAX_QUERY_LENGTH` | Maximum query length in characters | 10000 |
-| `MYSQL_MAX_PARAMETER_LENGTH` | Maximum parameter length | 1000 |
-| `MYSQL_LOG_SECURITY_EVENTS` | Log security violations | true |
-| `MYSQL_LOG_REJECTED_QUERIES` | Log rejected queries | true |
-| `MYSQL_AUDIT_ALL_QUERIES` | Audit all queries (performance impact) | false |
+| Variable                           | Description                                                        | Default      |
+| ---------------------------------- | ------------------------------------------------------------------ | ------------ |
+| `MYSQL_ENABLE_SECURITY`            | Enable all security features                                       | true         |
+| `MYSQL_ENABLE_INJECTION_DETECTION` | Enable SQL injection detection                                     | true         |
+| `MYSQL_ENABLE_RATE_LIMITING`       | Enable rate limiting                                               | true         |
+| `MYSQL_FILTER_MODE`                | Filter mode (blacklist/whitelist/combined)                         | blacklist    |
+| `MYSQL_RATE_LIMIT_RPM`             | Rate limit requests per minute                                     | 60           |
+| `MYSQL_RATE_LIMIT_BURST`           | Burst size for rate limiting                                       | 10           |
+| `MYSQL_RATE_LIMIT_ALGORITHM`       | Rate limiting algorithm (token_bucket/sliding_window/fixed_window) | token_bucket |
+| `MYSQL_MAX_QUERY_LENGTH`           | Maximum query length in characters                                 | 10000        |
+| `MYSQL_MAX_PARAMETER_LENGTH`       | Maximum parameter length                                           | 1000         |
+| `MYSQL_LOG_SECURITY_EVENTS`        | Log security violations                                            | true         |
+| `MYSQL_LOG_REJECTED_QUERIES`       | Log rejected queries                                               | true         |
+| `MYSQL_AUDIT_ALL_QUERIES`          | Audit all queries (performance impact)                             | false        |
 
 ### Enabling Write Operations
 
@@ -275,6 +313,7 @@ src/fastmcp_mysql/
 5. Open a Pull Request
 
 Please ensure:
+
 - All tests pass
 - Code is formatted with black
 - Type hints are added

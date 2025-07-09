@@ -61,11 +61,27 @@ class TestQueryValidator:
         assert validator.get_query_type("TRUNCATE TABLE logs") == QueryType.DDL
         assert validator.get_query_type("CREATE INDEX idx_name ON users(name)") == QueryType.DDL
     
+    def test_get_query_type_use(self):
+        """Test identifying USE queries."""
+        validator = QueryValidator()
+        
+        assert validator.get_query_type("USE mydb") == QueryType.USE
+        assert validator.get_query_type("use testdb") == QueryType.USE
+        assert validator.get_query_type("  USE `database-name`  ") == QueryType.USE
+    
+    def test_get_query_type_show(self):
+        """Test identifying SHOW queries."""
+        validator = QueryValidator()
+        
+        assert validator.get_query_type("SHOW TABLES") == QueryType.SHOW
+        assert validator.get_query_type("show databases") == QueryType.SHOW
+        assert validator.get_query_type("  SHOW CREATE TABLE users  ") == QueryType.SHOW
+        assert validator.get_query_type("SHOW VARIABLES LIKE 'max%'") == QueryType.SHOW
+    
     def test_get_query_type_other(self):
         """Test identifying other query types."""
         validator = QueryValidator()
         
-        assert validator.get_query_type("SHOW TABLES") == QueryType.OTHER
         assert validator.get_query_type("DESCRIBE users") == QueryType.OTHER
         assert validator.get_query_type("SET @var = 1") == QueryType.OTHER
         assert validator.get_query_type("EXPLAIN SELECT * FROM users") == QueryType.OTHER
