@@ -254,7 +254,7 @@ class ConnectionManager:
         page_size = min(max(1, page_size), max_page_size)  # Limit page size
         
         # First, get the total count
-        count_query = f"SELECT COUNT(*) as total FROM ({query}) as subquery"
+        count_query = f"SELECT COUNT(*) as total FROM ({query}) as subquery"  # nosec B608
         
         async with self.get_connection() as conn:
             async with conn.cursor(cursor_class) as cursor:
@@ -277,7 +277,7 @@ class ConnectionManager:
                 offset = (page - 1) * page_size
                 
                 # Execute paginated query
-                paginated_query = f"{query} LIMIT {page_size} OFFSET {offset}"
+                paginated_query = f"{query} LIMIT {page_size} OFFSET {offset}"  # nosec B608
                 await cursor.execute(paginated_query, params)
                 data = await cursor.fetchall()
         

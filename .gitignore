@@ -164,4 +164,4 @@ logs/
 .ruff_cache/
 
 # uv
-uv.lock
+# uv.lock is intentionally committed for reproducibility
