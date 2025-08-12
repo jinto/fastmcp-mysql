@@ -19,7 +19,7 @@ jobs:
       next_version: ${{ steps.check.outputs.next_version }}
       release_type: ${{ steps.check.outputs.release_type }}
     steps:
-      - uses: actions/checkout@v4
+      - uses: actions/checkout@v5
         with:
           fetch-depth: 0
       
@@ -95,7 +95,7 @@ jobs:
     needs: check-release
     if: needs.check-release.outputs.should_release == 'true'
     steps:
-      - uses: actions/checkout@v4
+      - uses: actions/checkout@v5
         with:
           fetch-depth: 0
       
